@@ -26,9 +26,13 @@ import org.apache.rocketmq.client.trace.TraceContext;
 import org.apache.rocketmq.client.trace.TraceDispatcher;
 import org.apache.rocketmq.client.trace.TraceType;
 import org.apache.rocketmq.common.protocol.NamespaceUtil;
-
+/**
+ * 发送消息 前后钩子
+ */
 public class SendMessageTraceHookImpl implements SendMessageHook {
-
+    /**
+     * 跟踪消息
+     */
     private TraceDispatcher localDispatcher;
 
     public SendMessageTraceHookImpl(TraceDispatcher localDispatcher) {
@@ -40,13 +44,19 @@ public class SendMessageTraceHookImpl implements SendMessageHook {
         return "SendMessageTraceHook";
     }
 
+    /**
+     * 在消息发送之前 为SendMessageContext 设置  TraceContext
+     * @param context
+     */
     @Override
     public void sendMessageBefore(SendMessageContext context) {
         //if it is message trace data,then it doesn't recorded
+        //如果是消息跟踪数据，则不记录
         if (context == null || context.getMessage().getTopic().startsWith(((AsyncTraceDispatcher) localDispatcher).getTraceTopicName())) {
             return;
         }
         //build the context content of TraceContext
+        //构建 TraceContext
         TraceContext traceContext = new TraceContext();
         traceContext.setTraceBeans(new ArrayList<TraceBean>(1));
         context.setMqTraceContext(traceContext);
@@ -66,6 +76,8 @@ public class SendMessageTraceHookImpl implements SendMessageHook {
     @Override
     public void sendMessageAfter(SendMessageContext context) {
         //if it is message trace data,then it doesn't recorded
+        //如果是消息跟踪数据，则不记录
+
         if (context == null || context.getMessage().getTopic().startsWith(((AsyncTraceDispatcher) localDispatcher).getTraceTopicName())
             || context.getMqTraceContext() == null) {
             return;

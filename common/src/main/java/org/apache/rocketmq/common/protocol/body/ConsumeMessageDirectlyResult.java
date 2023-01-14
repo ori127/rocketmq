@@ -21,9 +21,18 @@ import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class ConsumeMessageDirectlyResult extends RemotingSerializable {
     private boolean order = false;
+    /**
+     * 是否自动提交
+     */
     private boolean autoCommit = true;
+    /**
+     * 消费结果
+     */
     private CMResult consumeResult;
     private String remark;
+    /**
+     * 花费时间
+     */
     private long spentTimeMills;
 
     public boolean isOrder() {

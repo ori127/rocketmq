@@ -32,7 +32,9 @@ import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * 消费消息 前后钩子 OpenTracing
+ */
 public class ConsumeMessageOpenTracingHookImpl implements ConsumeMessageHook {
 
     private Tracer tracer;

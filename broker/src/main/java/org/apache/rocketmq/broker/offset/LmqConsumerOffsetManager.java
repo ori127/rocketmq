@@ -25,7 +25,13 @@ import org.apache.rocketmq.broker.BrokerPathConfigHelper;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+/**
+ * 轻量级消费偏移量管理
+ */
 public class LmqConsumerOffsetManager extends ConsumerOffsetManager {
+    /**
+     * key 为 topic@group, value 为 偏移量
+     */
     private ConcurrentHashMap<String, Long> lmqOffsetTable = new ConcurrentHashMap<>(512);
 
     public LmqConsumerOffsetManager() {
@@ -38,10 +44,12 @@ public class LmqConsumerOffsetManager extends ConsumerOffsetManager {
 
     @Override
     public long queryOffset(final String group, final String topic, final int queueId) {
+        //不是轻量级 topic 由父类 来获取
         if (!MixAll.isLmq(group)) {
             return super.queryOffset(group, topic, queueId);
         }
         // topic@group
+        //轻量级topic 根据 topic@group 直接获取 该 topic 该消费组的偏移量
         String key = topic + TOPIC_GROUP_SEPARATOR + group;
         Long offset = lmqOffsetTable.get(key);
         if (offset != null) {
@@ -52,11 +60,13 @@ public class LmqConsumerOffsetManager extends ConsumerOffsetManager {
 
     @Override
     public Map<Integer, Long> queryOffset(final String group, final String topic) {
+        //不是轻量级 topic 由父类 来获取
         if (!MixAll.isLmq(group)) {
             return super.queryOffset(group, topic);
         }
         Map<Integer, Long> map = new HashMap<>();
         // topic@group
+        //轻量级topic 根据 topic@group 直接获取 该 topic 该消费组的偏移量
         String key = topic + TOPIC_GROUP_SEPARATOR + group;
         Long offset = lmqOffsetTable.get(key);
         if (offset != null) {
@@ -68,11 +78,13 @@ public class LmqConsumerOffsetManager extends ConsumerOffsetManager {
     @Override
     public void commitOffset(final String clientHost, final String group, final String topic, final int queueId,
         final long offset) {
+        //不是轻量级 topic 由父类 来提交
         if (!MixAll.isLmq(group)) {
             super.commitOffset(clientHost, group, topic, queueId, offset);
             return;
         }
         // topic@group
+        //轻量级topic 根据 topic@group
         String key = topic + TOPIC_GROUP_SEPARATOR + group;
         lmqOffsetTable.put(key, offset);
     }
@@ -82,6 +94,10 @@ public class LmqConsumerOffsetManager extends ConsumerOffsetManager {
         return this.encode(false);
     }
 
+    /**
+     *  "/config/lmqConsumerOffset.json"
+     * @return
+     */
     @Override
     public String configFilePath() {
         return BrokerPathConfigHelper.getLmqConsumerOffsetPath(brokerController.getMessageStoreConfig().getStorePathRootDir());

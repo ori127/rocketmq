@@ -24,20 +24,60 @@ import org.apache.rocketmq.remoting.InvokeCallback;
 import org.apache.rocketmq.remoting.common.SemaphoreReleaseOnlyOnce;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+/**
+ * ResponseFuture
+ */
 public class ResponseFuture {
+    /**
+     * 对应的 channel
+     */
     private final Channel channel;
+    /**
+     * 请求id
+     */
     private final int opaque;
+    /**
+     * 请求命令
+     */
     private final RemotingCommand request;
+    /**
+     * 超时时间
+     */
     private final long timeoutMillis;
+    /**
+     * 进行回调处理
+     * 1.超时进行回调
+     */
     private final InvokeCallback invokeCallback;
+    /**
+     * 开始时间
+     */
     private final long beginTimestamp = System.currentTimeMillis();
+    /**
+     * waitResponse() 等待结果
+     * putResponse() 设置结果
+     *
+     */
     private final CountDownLatch countDownLatch = new CountDownLatch(1);
-
+    /**
+     * 设置的信号量用来释放信号
+     */
     private final SemaphoreReleaseOnlyOnce once;
-
+    /**
+     * 执行一次回调
+     */
     private final AtomicBoolean executeCallbackOnlyOnce = new AtomicBoolean(false);
+    /**
+     * 响应结果
+     */
     private volatile RemotingCommand responseCommand;
+    /**
+     * 是否发送成功
+     */
     private volatile boolean sendRequestOK = true;
+    /**
+     * 异常原因
+     */
     private volatile Throwable cause;
     private volatile boolean interrupted = false;
 
@@ -80,6 +120,12 @@ public class ResponseFuture {
         return diff > this.timeoutMillis;
     }
 
+    /**
+     * 等待请求完成
+     * @param timeoutMillis
+     * @return
+     * @throws InterruptedException
+     */
     public RemotingCommand waitResponse(final long timeoutMillis) throws InterruptedException {
         this.countDownLatch.await(timeoutMillis, TimeUnit.MILLISECONDS);
         return this.responseCommand;

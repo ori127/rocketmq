@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.broker.failover;
+package org.apache.rocketmq.broker.filter.failover;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

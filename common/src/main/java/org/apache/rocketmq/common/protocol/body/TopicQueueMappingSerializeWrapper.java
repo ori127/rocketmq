@@ -23,6 +23,9 @@ import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 import java.util.Map;
 
+/**
+ * TopicQueueMapping 序列化包装对象
+ */
 public class TopicQueueMappingSerializeWrapper extends RemotingSerializable {
     private Map<String/* topic */, TopicQueueMappingDetail> topicQueueMappingInfoMap;
     private DataVersion dataVersion = new DataVersion();

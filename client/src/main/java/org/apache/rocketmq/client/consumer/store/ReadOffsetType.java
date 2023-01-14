@@ -16,16 +16,22 @@
  */
 package org.apache.rocketmq.client.consumer.store;
 
+/**
+ * 读取偏移量的方式
+ */
 public enum ReadOffsetType {
     /**
+     * 从内存读取
      * From memory
      */
     READ_FROM_MEMORY,
     /**
+     * 从磁盘读取
      * From storage
      */
     READ_FROM_STORE,
     /**
+     * 先从内存读取然后再从磁盘读取
      * From memory,then from storage
      */
     MEMORY_FIRST_THEN_STORE;

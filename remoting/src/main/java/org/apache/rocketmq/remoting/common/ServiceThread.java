@@ -25,12 +25,23 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
  */
 public abstract class ServiceThread implements Runnable {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
-
+    /**
+     * 等待线程中止时间 90秒
+     */
     private static final long JOIN_TIME = 90 * 1000;
+    /**
+     * 线程对象
+     */
     protected final Thread thread;
     protected volatile boolean hasNotified = false;
+    /**
+     * 是否停止标记
+     */
     protected volatile boolean stopped = false;
 
+    /**
+     * 创建线程对象 ,线程名称为该服务名称
+     */
     public ServiceThread() {
         this.thread = new Thread(this, this.getServiceName());
     }
@@ -56,16 +67,19 @@ public abstract class ServiceThread implements Runnable {
         }
 
         try {
+            //中断线程
             if (interrupt) {
                 this.thread.interrupt();
             }
 
             long beginTime = System.currentTimeMillis();
+            //等待线程中止
             this.thread.join(this.getJointime());
             long elapsedTime = System.currentTimeMillis() - beginTime;
             log.info("join thread " + this.getServiceName() + " elapsed time(ms) " + elapsedTime + " "
                 + this.getJointime());
         } catch (InterruptedException e) {
+            //线程被中断
             log.error("Interrupted", e);
         }
     }

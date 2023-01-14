@@ -42,10 +42,12 @@ public class NamesrvConfig {
      */
     private int defaultThreadPoolNums = 16;
     /**
+     * 客户的队列大小
      * Indicates the capacity of queue to hold client requests.
      */
     private int clientRequestThreadPoolQueueCapacity = 50000;
     /**
+     * 默认的队列大小容量
      * Indicates the capacity of queue to hold broker or operation requests.
      */
     private int defaultThreadPoolQueueCapacity = 10000;
@@ -53,7 +55,9 @@ public class NamesrvConfig {
      * Interval of periodic scanning for non-active broker;
      */
     private long scanNotActiveBrokerInterval = 5 * 1000;
-
+    /**
+     * 取消注册队列大小
+     */
     private int unRegisterBrokerQueueCapacity = 3000;
 
     /**

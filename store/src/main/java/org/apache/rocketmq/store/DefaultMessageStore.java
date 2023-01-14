@@ -98,11 +98,15 @@ public class DefaultMessageStore implements MessageStore {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     public final PerfCounter.Ticks perfs = new PerfCounter.Ticks(LOGGER);
-
+    /**
+     * 存储配置
+     */
     private final MessageStoreConfig messageStoreConfig;
     // CommitLog
     private final CommitLog commitLog;
-
+    /**
+     * 消费队列存储
+     */
     private final ConsumeQueueStore consumeQueueStore;
 
     private final FlushConsumeQueueService flushConsumeQueueService;
@@ -126,11 +130,20 @@ public class DefaultMessageStore implements MessageStore {
     private final TransientStorePool transientStorePool;
 
     private final RunningFlags runningFlags = new RunningFlags();
+    /**
+     * 系统时钟
+     */
     private final SystemClock systemClock = new SystemClock();
 
     private final ScheduledExecutorService scheduledExecutorService;
+    /**
+     * 状态管理
+     */
     private final BrokerStatsManager brokerStatsManager;
     private final MessageArrivingListener messageArrivingListener;
+    /**
+     * broker配置
+     */
     private final BrokerConfig brokerConfig;
 
     private volatile boolean shutdown = true;
@@ -143,11 +156,16 @@ public class DefaultMessageStore implements MessageStore {
     private final LinkedList<CommitLogDispatcher> dispatcherList;
 
     private RandomAccessFile lockFile;
-
+    /**
+     * 文件锁
+     */
     private FileLock lock;
 
     boolean shutDownNormal = false;
     // Max pull msg size
+    /**
+     * 获取哦消息最大大小
+     */
     private final static int MAX_PULL_MSG_SIZE = 128 * 1024 * 1024;
 
     private volatile int aliveReplicasNum = 1;
@@ -161,11 +179,15 @@ public class DefaultMessageStore implements MessageStore {
     private volatile long masterFlushedOffset = -1L;
 
     private volatile long brokerInitMaxOffset = -1L;
-
+    /**
+     * 存储消息钩子
+     */
     protected List<PutMessageHook> putMessageHookList = new ArrayList<>();
 
     private SendMessageBackHook sendMessageBackHook;
-
+    /**
+     * key 为 延迟等级 ,value 为 对应的延迟时间
+     */
     private final ConcurrentMap<Integer /* level */, Long/* delay timeMillis */> delayLevelTable =
         new ConcurrentHashMap<Integer, Long>(32);
 
@@ -491,14 +513,14 @@ public class DefaultMessageStore implements MessageStore {
 
     @Override
     public CompletableFuture<PutMessageResult> asyncPutMessage(MessageExtBrokerInner msg) {
-
+        //知悉存储消息钩子
         for (PutMessageHook putMessageHook : putMessageHookList) {
             PutMessageResult handleResult = putMessageHook.executeBeforePutMessage(msg);
             if (handleResult != null) {
                 return CompletableFuture.completedFuture(handleResult);
             }
         }
-
+        //消息含有 INNER_NUM 属性 但是  sysFlag 系统标记 没有 expectedFlag
         if (msg.getProperties().containsKey(MessageConst.PROPERTY_INNER_NUM)
             && !MessageSysFlag.check(msg.getSysFlag(), MessageSysFlag.INNER_BATCH_FLAG)) {
             LOGGER.warn("[BUG]The message had property {} but is not an inner batch", MessageConst.PROPERTY_INNER_NUM);
@@ -1022,11 +1044,19 @@ public class DefaultMessageStore implements MessageStore {
         return result;
     }
 
+    /**
+     * 获取提交日志最大偏移量
+     * @return
+     */
     @Override
     public long getMaxPhyOffset() {
         return this.commitLog.getMaxOffset();
     }
 
+    /**
+     * 获取提交日志最小偏移量
+     * @return
+     */
     @Override
     public long getMinPhyOffset() {
         return this.commitLog.getMinOffset();
@@ -1862,8 +1892,10 @@ public class DefaultMessageStore implements MessageStore {
 
         @Override
         public void dispatch(DispatchRequest request) {
+            //获取请求的事务类型
             final int tranType = MessageSysFlag.getTransactionValue(request.getSysFlag());
             switch (tranType) {
+                //TRANSACTION_NOT_TYPE TRANSACTION_COMMIT_TYPE 存储消息位置信息
                 case MessageSysFlag.TRANSACTION_NOT_TYPE:
                 case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
                     DefaultMessageStore.this.putMessagePositionInfo(request);
@@ -2591,6 +2623,12 @@ public class DefaultMessageStore implements MessageStore {
         return maxDelayLevel;
     }
 
+    /**
+     * 计算延迟时间
+     * @param delayLevel
+     * @param storeTimestamp
+     * @return
+     */
     public long computeDeliverTimestamp(final int delayLevel, final long storeTimestamp) {
         Long time = this.delayLevelTable.get(delayLevel);
         if (time != null) {

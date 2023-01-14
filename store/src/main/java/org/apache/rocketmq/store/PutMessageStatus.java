@@ -17,17 +17,50 @@
 package org.apache.rocketmq.store;
 
 public enum PutMessageStatus {
+    /**
+     * 成功
+     */
     PUT_OK,
+    /**
+     * 刷新磁盘超时
+     */
     FLUSH_DISK_TIMEOUT,
+    /**
+     * 刷新 备 超时
+     */
     FLUSH_SLAVE_TIMEOUT,
+    /**
+     * 备不可用
+     */
     SLAVE_NOT_AVAILABLE,
+    /**
+     * 服务不可用
+     */
     SERVICE_NOT_AVAILABLE,
+    /**
+     * 创建文件映射失败
+     */
     CREATE_MAPPED_FILE_FAILED,
+    /**
+     * 消息非法
+     */
     MESSAGE_ILLEGAL,
+    /**
+     * 属性超过大小
+     */
     PROPERTIES_SIZE_EXCEEDED,
+    /**
+     * 操作系统缓存页面繁忙
+     */
     OS_PAGE_CACHE_BUSY,
+    /**
+     * 位置
+     */
     UNKNOWN_ERROR,
     IN_SYNC_REPLICAS_NOT_ENOUGH,
+    /**
+     * 投放远程 broker 失败
+     */
     PUT_TO_REMOTE_BROKER_FAIL,
     LMQ_CONSUME_QUEUE_NUM_EXCEEDED,
     WHEEL_TIMER_FLOW_CONTROL,

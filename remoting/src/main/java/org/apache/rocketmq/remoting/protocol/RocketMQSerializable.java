@@ -29,14 +29,22 @@ import io.netty.buffer.ByteBuf;
 public class RocketMQSerializable {
     private static final Charset CHARSET_UTF8 = StandardCharsets.UTF_8;
 
+    /**
+     * 写字符串
+     * @param buf
+     * @param useShortLength 是否使用 Short 长度 记录长度
+     * @param str
+     */
     public static void writeStr(ByteBuf buf, boolean useShortLength, String str) {
         int lenIndex = buf.writerIndex();
+        //是否 使用 short 记录长度 先进行占位
         if (useShortLength) {
             buf.writeShort(0);
         } else {
             buf.writeInt(0);
         }
         int len = buf.writeCharSequence(str, StandardCharsets.UTF_8);
+        //写入字符串的长度
         if (useShortLength) {
             buf.setShort(lenIndex, len);
         } else {
@@ -44,6 +52,14 @@ public class RocketMQSerializable {
         }
     }
 
+    /**
+     * 读取字符串
+     * @param buf
+     * @param useShortLength 长度是否使用 short 类型
+     * @param limit
+     * @return
+     * @throws RemotingCommandException
+     */
     private static String readStr(ByteBuf buf, boolean useShortLength, int limit) throws RemotingCommandException {
         int len = useShortLength ? buf.readShort() : buf.readInt();
         if (len == 0) {

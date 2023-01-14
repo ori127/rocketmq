@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.client.hook;
 
+/**
+ * 结束事务钩子
+ */
 public interface EndTransactionHook {
     String hookName();
 

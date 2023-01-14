@@ -18,18 +18,57 @@
 package org.apache.rocketmq.remoting.protocol;
 
 public enum LanguageCode {
+    /**
+     * JAVA
+     */
     JAVA((byte) 0),
+    /**
+     * CPP
+     */
     CPP((byte) 1),
+    /**
+     * DOTNET
+     */
     DOTNET((byte) 2),
+    /**
+     * PYTHON
+     */
     PYTHON((byte) 3),
+    /**
+     * DELPHI
+     */
     DELPHI((byte) 4),
+    /**
+     * ERLANG
+     */
     ERLANG((byte) 5),
+    /**
+     * RUBY
+     */
     RUBY((byte) 6),
+    /**
+     * OTHER
+     */
     OTHER((byte) 7),
+    /**
+     * HTTP
+     */
     HTTP((byte) 8),
+    /**
+     * GO
+     */
     GO((byte) 9),
+    /**
+     * PHP
+     */
     PHP((byte) 10),
+    /**
+     * OMS
+     */
     OMS((byte) 11),
+    /**
+     * RUST
+     */
     RUST((byte) 12);
 
     private byte code;

@@ -28,6 +28,9 @@ import org.apache.rocketmq.client.trace.TraceConstants;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageType;
 
+/**
+ * 用于跟踪事务的Hook
+ */
 public class EndTransactionOpenTracingHookImpl implements EndTransactionHook {
 
     private Tracer tracer;

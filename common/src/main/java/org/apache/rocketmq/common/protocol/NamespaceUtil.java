@@ -46,8 +46,9 @@ public class NamespaceUtil {
         if (isDLQTopic(resourceWithNamespace)) {
             stringBuilder.append(MixAll.DLQ_GROUP_TOPIC_PREFIX);
         }
-
+        //去掉 DQL 前缀 和 RETRY 前缀
         String resourceWithoutRetryAndDLQ = withOutRetryAndDLQ(resourceWithNamespace);
+        //去掉 namespace
         int index = resourceWithoutRetryAndDLQ.indexOf(NAMESPACE_SEPARATOR);
         if (index > 0) {
             String resourceWithoutNamespace = resourceWithoutRetryAndDLQ.substring(index + 1);
@@ -58,6 +59,7 @@ public class NamespaceUtil {
     }
 
     /**
+     * 去掉对应的 namespace
      * If resource contains the namespace, unpack namespace from resource, just like:
      * (1) (MQ_INST_XX1%Topic_XXX1, MQ_INST_XX1) --> Topic_XXX1
      * (2) (MQ_INST_XX2%Topic_XXX2, NULL) --> MQ_INST_XX2%Topic_XXX2
@@ -72,7 +74,7 @@ public class NamespaceUtil {
         if (StringUtils.isEmpty(resourceWithNamespace) || StringUtils.isEmpty(namespace)) {
             return resourceWithNamespace;
         }
-
+        //去掉 DQL 前缀 和 RETRY 前缀 resourceWithNamespace
         String resourceWithoutRetryAndDLQ = withOutRetryAndDLQ(resourceWithNamespace);
         if (resourceWithoutRetryAndDLQ.startsWith(namespace + NAMESPACE_SEPARATOR)) {
             return withoutNamespace(resourceWithNamespace);
@@ -81,6 +83,12 @@ public class NamespaceUtil {
         return resourceWithNamespace;
     }
 
+    /**
+     * 将resource 添加 namespace% 开头
+     * @param namespace
+     * @param resourceWithOutNamespace
+     * @return
+     */
     public static String wrapNamespace(String namespace, String resourceWithOutNamespace) {
         if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resourceWithOutNamespace)) {
             return resourceWithOutNamespace;
@@ -105,6 +113,12 @@ public class NamespaceUtil {
 
     }
 
+    /**
+     * 判断 resource 是否已经以 namespace% 开头
+     * @param resource
+     * @param namespace
+     * @return
+     */
     public static boolean isAlreadyWithNamespace(String resource, String namespace) {
         if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource) || isSystemResource(resource)) {
             return false;
@@ -136,6 +150,11 @@ public class NamespaceUtil {
         return index > 0 ? resourceWithoutRetryAndDLQ.substring(0, index) : STRING_BLANK;
     }
 
+    /**
+     * 去掉 DQL 前缀 和 RETRY 前缀
+     * @param originalResource
+     * @return
+     */
     private static String withOutRetryAndDLQ(String originalResource) {
         if (StringUtils.isEmpty(originalResource)) {
             return STRING_BLANK;
@@ -151,6 +170,11 @@ public class NamespaceUtil {
         return originalResource;
     }
 
+    /**
+     * 是否是系统资源 是系统topic 或者是 系统消费组
+     * @param resource
+     * @return
+     */
     private static boolean isSystemResource(String resource) {
         if (StringUtils.isEmpty(resource)) {
             return false;
@@ -163,10 +187,20 @@ public class NamespaceUtil {
         return false;
     }
 
+    /**
+     * 是否是重试 topic
+     * @param resource
+     * @return
+     */
     public static boolean isRetryTopic(String resource) {
         return StringUtils.isNotBlank(resource) && resource.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX);
     }
 
+    /**
+     * 是否是延迟 topic
+     * @param resource
+     * @return
+     */
     public static boolean isDLQTopic(String resource) {
         return StringUtils.isNotBlank(resource) && resource.startsWith(MixAll.DLQ_GROUP_TOPIC_PREFIX);
     }

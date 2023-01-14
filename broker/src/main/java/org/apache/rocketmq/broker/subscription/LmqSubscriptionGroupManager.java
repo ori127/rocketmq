@@ -20,12 +20,20 @@ import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.subscription.SubscriptionGroupConfig;
 
+/**
+ * 轻量订阅配置管理
+ */
 public class LmqSubscriptionGroupManager extends SubscriptionGroupManager {
 
     public LmqSubscriptionGroupManager(BrokerController brokerController) {
         super(brokerController);
     }
 
+    /**
+     * 如果是轻量订阅配置 直接返回 否则 从订阅配置中找
+     * @param group
+     * @return
+     */
     @Override
     public SubscriptionGroupConfig findSubscriptionGroupConfig(final String group) {
         if (MixAll.isLmq(group)) {
@@ -35,7 +43,11 @@ public class LmqSubscriptionGroupManager extends SubscriptionGroupManager {
         }
         return super.findSubscriptionGroupConfig(group);
     }
-
+    /**
+     * 如果是轻量订阅配置 直接返回 否则 更新订阅配置
+     * @param config
+     * @return
+     */
     @Override
     public void updateSubscriptionGroupConfig(final SubscriptionGroupConfig config) {
         if (config == null || MixAll.isLmq(config.getGroupName())) {

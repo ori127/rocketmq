@@ -18,8 +18,17 @@ package org.apache.rocketmq.common.message;
 
 import java.net.SocketAddress;
 
+/**
+ * 消息的Id
+ */
 public class MessageId {
+    /**
+     * ip + port
+     */
     private SocketAddress address;
+    /**
+     * offset
+     */
     private long offset;
 
     public MessageId(SocketAddress address, long offset) {

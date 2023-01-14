@@ -20,6 +20,10 @@ package org.apache.rocketmq.broker.latency;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 
+/**
+ * FutureTask 扩展 获取 runnable
+ * @param <V>
+ */
 public class FutureTaskExt<V> extends FutureTask<V> {
     private final Runnable runnable;
 

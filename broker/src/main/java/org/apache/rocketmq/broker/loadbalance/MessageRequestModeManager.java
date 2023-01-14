@@ -23,10 +23,15 @@ import org.apache.rocketmq.common.ConfigManager;
 import org.apache.rocketmq.common.protocol.body.SetMessageRequestModeRequestBody;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+/**
+ *对应的 topic 消费组  获取消息请求方式
+ */
 public class MessageRequestModeManager extends ConfigManager {
 
     private transient BrokerController brokerController;
-
+    /**
+     * key 为 对应的 topic  , value.key  为 消费组 , value.value  获取消息的方式
+     */
     private ConcurrentHashMap<String/*topic*/, ConcurrentHashMap<String/*consumerGroup*/, SetMessageRequestModeRequestBody>>
         messageRequestModeMap = new ConcurrentHashMap<String, ConcurrentHashMap<String, SetMessageRequestModeRequestBody>>();
 
@@ -38,6 +43,12 @@ public class MessageRequestModeManager extends ConfigManager {
         this.brokerController = brokerController;
     }
 
+    /**
+     * 设置 topic 消费组 对应的 RequestMode
+     * @param topic
+     * @param consumerGroup
+     * @param requestBody
+     */
     public void setMessageRequestMode(String topic, String consumerGroup, SetMessageRequestModeRequestBody requestBody) {
         ConcurrentHashMap<String, SetMessageRequestModeRequestBody> consumerGroup2ModeMap = messageRequestModeMap.get(topic);
         if (consumerGroup2ModeMap == null) {
@@ -51,6 +62,12 @@ public class MessageRequestModeManager extends ConfigManager {
         consumerGroup2ModeMap.put(consumerGroup, requestBody);
     }
 
+    /**
+     * 根据 topic 和 消费组 名称 获取拉取消息 方式
+     * @param topic
+     * @param consumerGroup
+     * @return
+     */
     public SetMessageRequestModeRequestBody getMessageRequestMode(String topic, String consumerGroup) {
         ConcurrentHashMap<String, SetMessageRequestModeRequestBody> consumerGroup2ModeMap = messageRequestModeMap.get(topic);
         if (consumerGroup2ModeMap != null) {
@@ -73,6 +90,10 @@ public class MessageRequestModeManager extends ConfigManager {
         return this.encode(false);
     }
 
+    /**
+     * 配置文件路径
+     * @return
+     */
     @Override
     public String configFilePath() {
         return BrokerPathConfigHelper.getMessageRequestModePath(this.brokerController.getMessageStoreConfig().getStorePathRootDir());

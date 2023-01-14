@@ -22,8 +22,13 @@ import java.util.Set;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+/**
+ * 批量上锁的 Response
+ */
 public class LockBatchResponseBody extends RemotingSerializable {
-
+    /**
+     * 成功上锁的 MessageQueue 集合
+     */
     private Set<MessageQueue> lockOKMQSet = new HashSet<MessageQueue>();
 
     public Set<MessageQueue> getLockOKMQSet() {

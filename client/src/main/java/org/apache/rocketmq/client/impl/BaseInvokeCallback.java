@@ -20,6 +20,10 @@ package org.apache.rocketmq.client.impl;
 import org.apache.rocketmq.remoting.InvokeCallback;
 import org.apache.rocketmq.remoting.netty.ResponseFuture;
 
+/**
+ * 回调抽象类  执行RpC请求 后置 钩子
+ * 实现 onComplete 方法
+ */
 public abstract class BaseInvokeCallback implements InvokeCallback {
     private final MQClientAPIImpl mqClientAPI;
 

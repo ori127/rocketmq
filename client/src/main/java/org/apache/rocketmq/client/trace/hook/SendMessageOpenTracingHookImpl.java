@@ -28,6 +28,9 @@ import org.apache.rocketmq.client.producer.SendStatus;
 import org.apache.rocketmq.client.trace.TraceConstants;
 import org.apache.rocketmq.common.message.Message;
 
+/**
+ * 发送消息 前后钩子 OpenTracing
+ */
 public class SendMessageOpenTracingHookImpl implements SendMessageHook {
 
     private Tracer tracer;

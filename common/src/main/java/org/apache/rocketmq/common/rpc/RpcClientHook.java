@@ -16,12 +16,29 @@
  */
 package org.apache.rocketmq.common.rpc;
 
+/**
+ * rpc 客户端前置钩子
+ */
 public abstract class RpcClientHook {
 
     //if the return is not null, return it
+
+    /**
+     * 没有返回 null 进行 返回
+     * @param rpcRequest
+     * @return
+     * @throws RpcException
+     */
     public abstract RpcResponse beforeRequest(RpcRequest rpcRequest) throws RpcException;
 
     //if the return is not null, return it
+
+    /**
+     *  没有返回 null 进行 返回
+     * @param rpcResponse
+     * @return
+     * @throws RpcException
+     */
     public abstract RpcResponse afterResponse(RpcResponse rpcResponse) throws RpcException;
 
 }

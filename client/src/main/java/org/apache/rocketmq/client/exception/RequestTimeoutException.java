@@ -19,9 +19,18 @@ package org.apache.rocketmq.client.exception;
 
 import org.apache.rocketmq.common.UtilAll;
 
+/**
+ * 请求超时信息
+ */
 public class RequestTimeoutException extends Exception {
     private static final long serialVersionUID = -5758410930844185841L;
+    /**
+     * 错误码
+     */
     private int responseCode;
+    /**
+     * 错误信息
+     */
     private String errorMessage;
 
     public RequestTimeoutException(String errorMessage, Throwable cause) {

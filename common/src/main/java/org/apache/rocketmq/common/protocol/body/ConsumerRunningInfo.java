@@ -36,7 +36,9 @@ public class ConsumerRunningInfo extends RemotingSerializable {
     public static final String PROP_CONSUMER_START_TIMESTAMP = "PROP_CONSUMER_START_TIMESTAMP";
 
     private Properties properties = new Properties();
-
+    /**
+     * 订阅信息
+     */
     private TreeSet<SubscriptionData> subscriptionSet = new TreeSet<SubscriptionData>();
 
     private TreeMap<MessageQueue, ProcessQueueInfo> mqTable = new TreeMap<MessageQueue, ProcessQueueInfo>();

@@ -19,8 +19,14 @@ package org.apache.rocketmq.common.namesrv;
 
 import org.apache.rocketmq.common.protocol.body.KVTable;
 
+/**
+ * 注册 Broker 的结果
+ */
 public class RegisterBrokerResult {
     private String haServerAddr;
+    /**
+     * master地址
+     */
     private String masterAddr;
     private KVTable kvTable;
 

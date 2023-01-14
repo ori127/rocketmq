@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
  * @see <a href="https://github.com/apache/rocketmq/blob/3bd4b2b2f61a824196f19b03146e2c929c62777b/store/src/main/java/org/apache/rocketmq/store/config/MessageStoreConfig.java#L137">org.apache.rocketmq.store.config.MessageStoreConfig</a>
  */
 public class CustomizedRetryPolicy implements RetryPolicy {
+    // 18 个
     // 1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h
     private long[] next = new long[] {
         TimeUnit.SECONDS.toMillis(1),
@@ -71,6 +72,7 @@ public class CustomizedRetryPolicy implements RetryPolicy {
     }
 
     /**
+     * 兼容旧 逻辑  根据 重试 次数及算下延迟时间
      * Index = reconsumeTimes + 2 is compatible logic, cause old delayLevelTable starts from index 1,
      * and old index is reconsumeTime + 3
      *

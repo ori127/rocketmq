@@ -26,9 +26,13 @@ import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.logging.InternalLogger;
 
 public class StatsItem {
-
+    /**
+     * 值
+     */
     private final LongAdder value = new LongAdder();
-
+    /**
+     * 次数
+     */
     private final LongAdder times = new LongAdder();
 
     private final LinkedList<CallSnapshot> csListMinute = new LinkedList<CallSnapshot>();
@@ -36,8 +40,13 @@ public class StatsItem {
     private final LinkedList<CallSnapshot> csListHour = new LinkedList<CallSnapshot>();
 
     private final LinkedList<CallSnapshot> csListDay = new LinkedList<CallSnapshot>();
-
+    /**
+     * 统计的名称
+     */
     private final String statsName;
+    /**
+     * 统计的key
+     */
     private final String statsKey;
     private final ScheduledExecutorService scheduledExecutorService;
     private final InternalLogger log;
@@ -153,19 +162,27 @@ public class StatsItem {
         }, Math.abs(UtilAll.computeNextMorningTimeMillis() - System.currentTimeMillis()) - 2000, 1000 * 60 * 60 * 24, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * 以秒为单位采样
+     */
     public void samplingInSeconds() {
         synchronized (this.csListMinute) {
             if (this.csListMinute.size() == 0) {
+
                 this.csListMinute.add(new CallSnapshot(System.currentTimeMillis() - 10 * 1000, 0, 0));
             }
             this.csListMinute.add(new CallSnapshot(System.currentTimeMillis(), this.times.sum(), this.value
                 .sum()));
+            //超过7个 移除第一个
             if (this.csListMinute.size() > 7) {
                 this.csListMinute.removeFirst();
             }
         }
     }
 
+    /**
+     * 以一分钟为单位采样
+     */
     public void samplingInMinutes() {
         synchronized (this.csListHour) {
             if (this.csListHour.size() == 0) {
@@ -173,12 +190,16 @@ public class StatsItem {
             }
             this.csListHour.add(new CallSnapshot(System.currentTimeMillis(), this.times.sum(), this.value
                 .sum()));
+            //超过7个 移除第一个
             if (this.csListHour.size() > 7) {
                 this.csListHour.removeFirst();
             }
         }
     }
 
+    /**
+     * 以小时为单位采样
+     */
     public void samplingInHour() {
         synchronized (this.csListDay) {
             if (this.csListDay.size() == 0) {
@@ -186,6 +207,7 @@ public class StatsItem {
             }
             this.csListDay.add(new CallSnapshot(System.currentTimeMillis(), this.times.sum(), this.value
                 .sum()));
+            //超过7个 移除第一个
             if (this.csListDay.size() > 25) {
                 this.csListDay.removeFirst();
             }
@@ -233,8 +255,17 @@ public class StatsItem {
 }
 
 class CallSnapshot {
+    /**
+     * 创建时间戳
+     */
     private final long timestamp;
+    /**
+     * 次数总和
+     */
     private final long times;
+    /**
+     * 总值
+     */
 
     private final long value;
 

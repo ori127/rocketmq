@@ -18,8 +18,13 @@ package org.apache.rocketmq.common.message;
 
 import java.nio.ByteBuffer;
 
+/**
+ * 消息版本枚举对象
+ */
 public enum MessageVersion {
-
+    /**
+     * 消息版本
+     */
     MESSAGE_VERSION_V1(MessageDecoder.MESSAGE_MAGIC_CODE) {
         @Override
         public int getTopicLengthSize() {

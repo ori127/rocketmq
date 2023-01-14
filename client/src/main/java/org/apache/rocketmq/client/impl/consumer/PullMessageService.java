@@ -33,6 +33,10 @@ public class PullMessageService extends ServiceThread {
     private final LinkedBlockingQueue<MessageRequest> messageRequestQueue = new LinkedBlockingQueue<MessageRequest>();
 
     private final MQClientInstance mQClientFactory;
+
+    /**
+     * 单线程 用于提交延迟 请求
+     */
     private final ScheduledExecutorService scheduledExecutorService = Executors
         .newSingleThreadScheduledExecutor(new ThreadFactory() {
             @Override
@@ -45,7 +49,13 @@ public class PullMessageService extends ServiceThread {
         this.mQClientFactory = mQClientFactory;
     }
 
+    /**
+     * 延迟将获取消息请求请求添加到阻塞队列
+     * @param pullRequest
+     * @param timeDelay
+     */
     public void executePullRequestLater(final PullRequest pullRequest, final long timeDelay) {
+        //如果没有停止 则提交拉取请求
         if (!isStopped()) {
             this.scheduledExecutorService.schedule(new Runnable() {
                 @Override
@@ -58,6 +68,10 @@ public class PullMessageService extends ServiceThread {
         }
     }
 
+    /**
+     * 将获取消息请求添加到阻塞队列
+     * @param pullRequest
+     */
     public void executePullRequestImmediately(final PullRequest pullRequest) {
         try {
             this.messageRequestQueue.put(pullRequest);
@@ -65,7 +79,11 @@ public class PullMessageService extends ServiceThread {
             log.error("executePullRequestImmediately pullRequestQueue.put", e);
         }
     }
-
+    /**
+     * 延迟将获取消息请求请求添加到阻塞队列
+     * @param pullRequest
+     * @param timeDelay
+     */
     public void executePopPullRequestLater(final PopRequest pullRequest, final long timeDelay) {
         if (!isStopped()) {
             this.scheduledExecutorService.schedule(new Runnable() {
@@ -78,7 +96,10 @@ public class PullMessageService extends ServiceThread {
             log.warn("PullMessageServiceScheduledThread has shutdown");
         }
     }
-
+    /**
+     * 将获取消息请求添加到阻塞队列
+     * @param pullRequest
+     */
     public void executePopPullRequestImmediately(final PopRequest pullRequest) {
         try {
             this.messageRequestQueue.put(pullRequest);
@@ -87,6 +108,11 @@ public class PullMessageService extends ServiceThread {
         }
     }
 
+    /**
+     * 执行延迟任务
+     * @param r
+     * @param timeDelay
+     */
     public void executeTaskLater(final Runnable r, final long timeDelay) {
         if (!isStopped()) {
             this.scheduledExecutorService.schedule(r, timeDelay, TimeUnit.MILLISECONDS);
@@ -98,7 +124,10 @@ public class PullMessageService extends ServiceThread {
     public ScheduledExecutorService getScheduledExecutorService() {
         return scheduledExecutorService;
     }
-
+    /**
+     * 根据消费组名 拉取 获取消息 然后由 消费则进消费
+     * @param pullRequest
+     */
     private void pullMessage(final PullRequest pullRequest) {
         final MQConsumerInner consumer = this.mQClientFactory.selectConsumer(pullRequest.getConsumerGroup());
         if (consumer != null) {
@@ -109,6 +138,10 @@ public class PullMessageService extends ServiceThread {
         }
     }
 
+    /**
+     * 根据消费组名 拉取 获取消息 然后由 消费则进消费
+     * @param popRequest
+     */
     private void popMessage(final PopRequest popRequest) {
         final MQConsumerInner consumer = this.mQClientFactory.selectConsumer(popRequest.getConsumerGroup());
         if (consumer != null) {
@@ -122,9 +155,10 @@ public class PullMessageService extends ServiceThread {
     @Override
     public void run() {
         log.info(this.getServiceName() + " service started");
-
+        //是否停止
         while (!this.isStopped()) {
             try {
+                //从阻塞队列当中获取 消息请求
                 MessageRequest messageRequest = this.messageRequestQueue.take();
                 if (messageRequest.getMessageRequestMode() == MessageRequestMode.POP) {
                     this.popMessage((PopRequest)messageRequest);

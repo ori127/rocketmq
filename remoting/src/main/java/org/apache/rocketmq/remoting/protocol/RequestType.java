@@ -17,6 +17,9 @@
 
 package org.apache.rocketmq.remoting.protocol;
 
+/**
+ * 请求类型
+ */
 public enum RequestType {
     STREAM((byte) 0);
 

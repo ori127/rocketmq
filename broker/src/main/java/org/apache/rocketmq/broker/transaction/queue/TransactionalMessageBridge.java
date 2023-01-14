@@ -52,10 +52,18 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TransactionalMessageBridge {
     private static final InternalLogger LOGGER = InnerLoggerFactory.getLogger(LoggerName.TRANSACTION_LOGGER_NAME);
-
+    /**
+     * 消息队列的映射  value.topic 为 RMQ_SYS_TRANS_OP_HALF_TOPIC
+     */
     private final ConcurrentHashMap<MessageQueue, MessageQueue> opQueueMap = new ConcurrentHashMap<>();
     private final BrokerController brokerController;
+    /**
+     * 消息存储
+     */
     private final MessageStore store;
+    /**
+     * 存储地址
+     */
     private final SocketAddress storeHost;
 
     public TransactionalMessageBridge(BrokerController brokerController, MessageStore store) {
@@ -72,7 +80,14 @@ public class TransactionalMessageBridge {
 
     }
 
+    /**
+     * 获取该消息组 CID_RMQ_SYS_TRANS 的偏移量
+     * 不存在 则从存储获取 该topic 该消息队列 最小偏移量
+     * @param mq
+     * @return
+     */
     public long fetchConsumeOffset(MessageQueue mq) {
+        //获取 该topic CID_RMQ_SYS_TRANS 消费组的 消息队列 获取 偏移量 如果 不存在 则从存储获取 该topic 该消息队列 最小偏移量
         long offset = brokerController.getConsumerOffsetManager().queryOffset(TransactionalMessageUtil.buildConsumerGroup(),
             mq.getTopic(), mq.getQueueId());
         if (offset == -1) {
@@ -81,9 +96,16 @@ public class TransactionalMessageBridge {
         return offset;
     }
 
+    /**
+     * 根据 topic 可读数量 获取 MessageQueue 消息队列
+     * @param topic
+     * @return
+     */
     public Set<MessageQueue> fetchMessageQueues(String topic) {
         Set<MessageQueue> mqSet = new HashSet<>();
+        // 获取 该 topic 的 配置 如果不存在 则创建 该 topic 配置
         TopicConfig topicConfig = selectTopicConfig(topic);
+        //有可读消息队列数量 根据可读数量 获取 MessageQueue 消息队列
         if (topicConfig != null && topicConfig.getReadQueueNums() > 0) {
             for (int i = 0; i < topicConfig.getReadQueueNums(); i++) {
                 MessageQueue mq = new MessageQueue();
@@ -97,11 +119,20 @@ public class TransactionalMessageBridge {
     }
 
     public void updateConsumeOffset(MessageQueue mq, long offset) {
+        //RemotingHelper.parseSocketAddressAddr(this.storeHost) IP:port FIXME::那这样不是换台 Ip 会变
+        //更新 CID_SYS_RMQ_TRANS  该 topic  该消息队列的偏移量
         this.brokerController.getConsumerOffsetManager().commitOffset(
             RemotingHelper.parseSocketAddressAddr(this.storeHost), TransactionalMessageUtil.buildConsumerGroup(), mq.getTopic(),
             mq.getQueueId(), offset);
     }
 
+    /**
+     * 从 RMQ_SYS_TRANS_HALF_TOPIC topic 获取 该 CID_SYS_RMQ_TRANS 消费者 该  queueId  消息
+     * @param queueId
+     * @param offset
+     * @param nums
+     * @return
+     */
     public PullResult getHalfMessage(int queueId, long offset, int nums) {
         String group = TransactionalMessageUtil.buildConsumerGroup();
         String topic = TransactionalMessageUtil.buildHalfTopic();
@@ -109,6 +140,13 @@ public class TransactionalMessageBridge {
         return getMessage(group, topic, queueId, offset, nums, sub);
     }
 
+    /**
+     * 从 RMQ_SYS_TRANS_OP_HALF_TOPIC topic 获取 该 CID_SYS_RMQ_TRANS 消费者 该  queueId  消息
+     * @param queueId
+     * @param offset
+     * @param nums
+     * @return
+     */
     public PullResult getOpMessage(int queueId, long offset, int nums) {
         String group = TransactionalMessageUtil.buildConsumerGroup();
         String topic = TransactionalMessageUtil.buildOpTopic();
@@ -116,8 +154,19 @@ public class TransactionalMessageBridge {
         return getMessage(group, topic, queueId, offset, nums, sub);
     }
 
+    /**
+     * 获取消息
+     * @param group
+     * @param topic
+     * @param queueId
+     * @param offset
+     * @param nums
+     * @param sub
+     * @return
+     */
     private PullResult getMessage(String group, String topic, int queueId, long offset, int nums,
         SubscriptionData sub) {
+        //获取 该组的 该topic 从 该消息队列 获取  nums 消息
         GetMessageResult getMessageResult = store.getMessage(group, topic, queueId, offset, nums, null);
 
         if (getMessageResult != null) {
@@ -125,8 +174,11 @@ public class TransactionalMessageBridge {
             List<MessageExt> foundList = null;
             switch (getMessageResult.getStatus()) {
                 case FOUND:
+                    //发现消息
                     pullStatus = PullStatus.FOUND;
+                    //进行解码
                     foundList = decodeMsgList(getMessageResult);
+                    //统计信息
                     this.brokerController.getBrokerStatsManager().incGroupGetNums(group, topic,
                         getMessageResult.getMessageCount());
                     this.brokerController.getBrokerStatsManager().incGroupGetSize(group, topic,
@@ -140,12 +192,14 @@ public class TransactionalMessageBridge {
                             .getStoreTimestamp());
                     break;
                 case NO_MATCHED_MESSAGE:
+                    //没有匹配的消息
                     pullStatus = PullStatus.NO_MATCHED_MSG;
                     LOGGER.warn("No matched message. GetMessageStatus={}, topic={}, groupId={}, requestOffset={}",
                         getMessageResult.getStatus(), topic, group, offset);
                     break;
                 case NO_MESSAGE_IN_QUEUE:
                 case OFFSET_OVERFLOW_ONE:
+                    //没有新消息
                     pullStatus = PullStatus.NO_NEW_MSG;
                     LOGGER.warn("No new message. GetMessageStatus={}, topic={}, groupId={}, requestOffset={}",
                         getMessageResult.getStatus(), topic, group, offset);
@@ -155,6 +209,7 @@ public class TransactionalMessageBridge {
                 case OFFSET_FOUND_NULL:
                 case OFFSET_OVERFLOW_BADLY:
                 case OFFSET_TOO_SMALL:
+                    //非法的偏移量
                     pullStatus = PullStatus.OFFSET_ILLEGAL;
                     LOGGER.warn("Offset illegal. GetMessageStatus={}, topic={}, groupId={}, requestOffset={}",
                         getMessageResult.getStatus(), topic, group, offset);
@@ -163,7 +218,7 @@ public class TransactionalMessageBridge {
                     assert false;
                     break;
             }
-
+            //返回获取的的结果
             return new PullResult(pullStatus, getMessageResult.getNextBeginOffset(), getMessageResult.getMinOffset(),
                 getMessageResult.getMaxOffset(), foundList);
 
@@ -174,9 +229,15 @@ public class TransactionalMessageBridge {
         }
     }
 
+    /**
+     * 对获得的消息进行解码
+     * @param getMessageResult
+     * @return
+     */
     private List<MessageExt> decodeMsgList(GetMessageResult getMessageResult) {
         List<MessageExt> foundList = new ArrayList<>();
         try {
+            //遍历发现的消息进解码
             List<ByteBuffer> messageBufferList = getMessageResult.getMessageBufferList();
             for (ByteBuffer bb : messageBufferList) {
                 MessageExt msgExt = MessageDecoder.decode(bb, true, false);
@@ -192,20 +253,32 @@ public class TransactionalMessageBridge {
         return foundList;
     }
 
+    /**
+     * 同步存储半事务消息
+     * @param messageInner
+     * @return
+     */
     public PutMessageResult putHalfMessage(MessageExtBrokerInner messageInner) {
         return store.putMessage(parseHalfMessageInner(messageInner));
     }
-
+    /**
+     * 异步存储半事务消息
+     * @param messageInner
+     * @return
+     */
     public CompletableFuture<PutMessageResult> asyncPutHalfMessage(MessageExtBrokerInner messageInner) {
         return store.asyncPutMessage(parseHalfMessageInner(messageInner));
     }
 
     private MessageExtBrokerInner parseHalfMessageInner(MessageExtBrokerInner msgInner) {
+        //添加 REAL_TOPIC REAL_QID 属性
         MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_REAL_TOPIC, msgInner.getTopic());
         MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_REAL_QUEUE_ID,
             String.valueOf(msgInner.getQueueId()));
+        //FIXME::重置事务标记 TRANSACTION_NOT_TYPE 去掉事务标记?
         msgInner.setSysFlag(
             MessageSysFlag.resetTransactionValue(msgInner.getSysFlag(), MessageSysFlag.TRANSACTION_NOT_TYPE));
+        //设置 topic 为 "RMQ_SYS_TRANS_HALF_TOPIC"
         msgInner.setTopic(TransactionalMessageUtil.buildHalfTopic());
         msgInner.setQueueId(0);
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
@@ -221,11 +294,21 @@ public class TransactionalMessageBridge {
         return true;
     }
 
+    /**
+     * 存储消息返回结果
+     * @param messageInner
+     * @return
+     */
     public PutMessageResult putMessageReturnResult(MessageExtBrokerInner messageInner) {
         LOGGER.debug("[BUG-TO-FIX] Thread:{} msgID:{}", Thread.currentThread().getName(), messageInner.getMsgId());
         return store.putMessage(messageInner);
     }
 
+    /**
+     * 存储消息返回是否成功
+     * @param messageInner
+     * @return
+     */
     public boolean putMessage(MessageExtBrokerInner messageInner) {
         PutMessageResult putMessageResult = store.putMessage(messageInner);
         if (putMessageResult != null
@@ -239,8 +322,10 @@ public class TransactionalMessageBridge {
     }
 
     public MessageExtBrokerInner renewImmunityHalfMessageInner(MessageExt msgExt) {
+        //将消息转成 MessageExtBrokerInner
         MessageExtBrokerInner msgInner = renewHalfMessageInner(msgExt);
         String queueOffsetFromPrepare = msgExt.getUserProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED_QUEUE_OFFSET);
+        // 复制 原消息的 TRAN_PREPARED_QUEUE_OFFSET 不存在 则 以 原消息的队列偏移量
         if (null != queueOffsetFromPrepare) {
             MessageAccessor.putProperty(msgInner, MessageConst.PROPERTY_TRANSACTION_PREPARED_QUEUE_OFFSET,
                 String.valueOf(queueOffsetFromPrepare));
@@ -262,6 +347,7 @@ public class TransactionalMessageBridge {
         msgInner.setMsgId(msgExt.getMsgId());
         msgInner.setSysFlag(msgExt.getSysFlag());
         msgInner.setTags(msgExt.getTags());
+        // 将tags 转成 hash编码
         msgInner.setTagsCode(MessageExtBrokerInner.tagsString2tagsCode(msgInner.getTags()));
         MessageAccessor.setProperties(msgInner, msgExt.getProperties());
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgExt.getProperties()));
@@ -276,9 +362,11 @@ public class TransactionalMessageBridge {
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setTopic(message.getTopic());
         msgInner.setBody(message.getBody());
+        //消息 的 队列 id 设置成消息队列 id
         msgInner.setQueueId(messageQueue.getQueueId());
         msgInner.setTags(message.getTags());
         msgInner.setTagsCode(MessageExtBrokerInner.tagsString2tagsCode(msgInner.getTags()));
+        //sysFlag 为 0
         msgInner.setSysFlag(0);
         MessageAccessor.setProperties(msgInner, message.getProperties());
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(message.getProperties()));
@@ -286,10 +374,16 @@ public class TransactionalMessageBridge {
         msgInner.setBornHost(this.storeHost);
         msgInner.setStoreHost(this.storeHost);
         msgInner.setWaitStoreMsgOK(false);
+        //设置唯一id
         MessageClientIDSetter.setUniqID(msgInner);
         return msgInner;
     }
 
+    /**
+     * 获取 该 topic 的 配置 如果不存在 则创建 该 topic 配置
+     * @param topic
+     * @return
+     */
     private TopicConfig selectTopicConfig(String topic) {
         TopicConfig topicConfig = brokerController.getTopicConfigManager().selectTopicConfig(topic);
         if (topicConfig == null) {
@@ -308,6 +402,7 @@ public class TransactionalMessageBridge {
      * @return This method will always return true.
      */
     private boolean addRemoveTagInTransactionOp(MessageExt prepareMessage, MessageQueue messageQueue) {
+        //将消息 Tag 设置成 REMOVETAG "d", body 为 队列的偏移量
         Message message = new Message(TransactionalMessageUtil.buildOpTopic(), TransactionalMessageUtil.REMOVETAG,
             String.valueOf(prepareMessage.getQueueOffset()).getBytes(TransactionalMessageUtil.CHARSET));
         writeOp(message, messageQueue);
@@ -316,9 +411,11 @@ public class TransactionalMessageBridge {
 
     private void writeOp(Message message, MessageQueue mq) {
         MessageQueue opQueue;
+        //根据消息队列 获取 opQueue
         if (opQueueMap.containsKey(mq)) {
             opQueue = opQueueMap.get(mq);
         } else {
+            //不存在进行新的映射
             opQueue = getOpQueueByHalf(mq);
             MessageQueue oldQueue = opQueueMap.putIfAbsent(mq, opQueue);
             if (oldQueue != null) {
@@ -328,9 +425,15 @@ public class TransactionalMessageBridge {
         if (opQueue == null) {
             opQueue = new MessageQueue(TransactionalMessageUtil.buildOpTopic(), mq.getBrokerName(), mq.getQueueId());
         }
+        //进行存储 topic 为 RMQ_SYS_TRANS_OP_HALF_TOPIC
         putMessage(makeOpMessageInner(message, opQueue));
     }
 
+    /**
+     * 将消息队列 抓成 OpQueue topic 设置成 RMQ_SYS_TRANS_OP_HALF_TOPIC
+     * @param halfMQ
+     * @return
+     */
     private MessageQueue getOpQueueByHalf(MessageQueue halfMQ) {
         MessageQueue opQueue = new MessageQueue();
         opQueue.setTopic(TransactionalMessageUtil.buildOpTopic());
@@ -339,6 +442,11 @@ public class TransactionalMessageBridge {
         return opQueue;
     }
 
+    /**
+     * 根据偏移量查找消息
+     * @param commitLogOffset
+     * @return
+     */
     public MessageExt lookMessageByOffset(final long commitLogOffset) {
         return this.store.lookMessageByOffset(commitLogOffset);
     }

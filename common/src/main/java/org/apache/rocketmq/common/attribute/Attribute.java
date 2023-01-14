@@ -16,8 +16,17 @@
  */
 package org.apache.rocketmq.common.attribute;
 
+/**
+ * 属性类
+ */
 public abstract class Attribute {
+    /**
+     * 属性名称
+     */
     protected String name;
+    /**
+     * 是否可变
+     */
     protected boolean changeable;
 
     public abstract void verify(String value);

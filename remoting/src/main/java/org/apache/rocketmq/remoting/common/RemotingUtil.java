@@ -216,7 +216,12 @@ public class RemotingUtil {
         return null;
     }
 
+    /**
+     * 关闭channel
+     * @param channel
+     */
     public static void closeChannel(Channel channel) {
+        //解析地址 关闭 channel
         final String addrRemote = RemotingHelper.parseChannelRemoteAddr(channel);
         if ("".equals(addrRemote)) {
             channel.close();

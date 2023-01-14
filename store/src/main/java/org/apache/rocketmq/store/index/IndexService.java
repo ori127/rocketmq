@@ -37,14 +37,27 @@ import org.apache.rocketmq.store.config.StorePathConfigHelper;
 public class IndexService {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     /**
+     * 创建 index 文件 最大尝试次数
      * Maximum times to attempt index file creation.
      */
     private static final int MAX_TRY_IDX_CREATE = 3;
     private final DefaultMessageStore defaultMessageStore;
+    /**
+     * hash slot 的数量
+     */
     private final int hashSlotNum;
+    /**
+     * index 的数量
+     */
     private final int indexNum;
+    /***
+     * 存储路径 "/index"
+     */
     private final String storePath;
     private final ArrayList<IndexFile> indexFileList = new ArrayList<IndexFile>();
+    /**
+     * 锁
+     */
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
     public IndexService(final DefaultMessageStore store) {
@@ -67,6 +80,7 @@ public class IndexService {
                     f.load();
 
                     if (!lastExitOK) {
+                        //索引文件超过检查点 记录时间 index 对文件进行销毁 删除
                         if (f.getEndTimestamp() > this.defaultMessageStore.getStoreCheckpoint()
                             .getIndexMsgTimestamp()) {
                             f.destroy(0);
@@ -88,6 +102,10 @@ public class IndexService {
         return true;
     }
 
+    /**
+     * index 文件总共 大小
+     * @return
+     */
     public long getTotalSize() {
         if (indexFileList.isEmpty()) {
             return 0;
@@ -103,7 +121,7 @@ public class IndexService {
             if (this.indexFileList.isEmpty()) {
                 return;
             }
-
+            //判断最后一个index文件结束偏移量是否比这个 偏移量小
             long endPhyOffset = this.indexFileList.get(0).getEndPhyOffset();
             if (endPhyOffset < offset) {
                 files = this.indexFileList.toArray();
@@ -115,6 +133,7 @@ public class IndexService {
         }
 
         if (files != null) {
+            //遍历 index文件集合 删除 结束遍历偏移量小于该偏移量的 index文件
             List<IndexFile> fileList = new ArrayList<IndexFile>();
             for (int i = 0; i < (files.length - 1); i++) {
                 IndexFile f = (IndexFile) files[i];
@@ -133,6 +152,7 @@ public class IndexService {
         if (!files.isEmpty()) {
             try {
                 this.readWriteLock.writeLock().lock();
+                //遍历index文件 进行删除 从index文件集合 中移除
                 for (IndexFile file : files) {
                     boolean destroyed = file.destroy(3000);
                     destroyed = destroyed && this.indexFileList.remove(file);
@@ -175,11 +195,12 @@ public class IndexService {
                 for (int i = this.indexFileList.size(); i > 0; i--) {
                     IndexFile f = this.indexFileList.get(i - 1);
                     boolean lastFile = i == this.indexFileList.size();
+                    //记录最后一个index文件的更新时间 和 结束偏移量
                     if (lastFile) {
                         indexLastUpdateTimestamp = f.getEndTimestamp();
                         indexLastUpdatePhyoffset = f.getEndPhyOffset();
                     }
-
+                    //index文件是否符合这个时间 然后查找 key 为 "topic#key"
                     if (f.isTimeMatched(begin, end)) {
 
                         f.selectPhyOffset(phyOffsets, buildKey(topic, key), maxNum, begin, end);
@@ -208,27 +229,31 @@ public class IndexService {
     }
 
     public void buildIndex(DispatchRequest req) {
+        //获取最后一个或者创建index 文件
         IndexFile indexFile = retryGetAndCreateIndexFile();
         if (indexFile != null) {
             long endPhyOffset = indexFile.getEndPhyOffset();
             DispatchRequest msg = req;
             String topic = msg.getTopic();
             String keys = msg.getKeys();
+            //消息的提交日志偏移量小于 结束偏移量的 则不构建index
             if (msg.getCommitLogOffset() < endPhyOffset) {
                 return;
             }
-
+            //获取事务标记
             final int tranType = MessageSysFlag.getTransactionValue(msg.getSysFlag());
             switch (tranType) {
                 case MessageSysFlag.TRANSACTION_NOT_TYPE:
                 case MessageSysFlag.TRANSACTION_PREPARED_TYPE:
                 case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
                     break;
+                //事务回滚不构建index
                 case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
                     return;
             }
 
             if (req.getUniqKey() != null) {
+                //存储唯一key 则建立 index
                 indexFile = putKey(indexFile, msg, buildKey(topic, req.getUniqKey()));
                 if (indexFile == null) {
                     LOGGER.error("putKey error commitlog {} uniqkey {}", req.getCommitLogOffset(), req.getUniqKey());
@@ -237,6 +262,7 @@ public class IndexService {
             }
 
             if (keys != null && keys.length() > 0) {
+                //keys 以 " " 进行分割 为每个key建立索引
                 String[] keyset = keys.split(MessageConst.KEY_SEPARATOR);
                 for (int i = 0; i < keyset.length; i++) {
                     String key = keyset[i];
@@ -255,6 +281,7 @@ public class IndexService {
     }
 
     private IndexFile putKey(IndexFile indexFile, DispatchRequest msg, String idxKey) {
+        //在index 文件上建立 index 直至成功
         for (boolean ok = indexFile.putKey(idxKey, msg.getCommitLogOffset(), msg.getStoreTimestamp()); !ok; ) {
             LOGGER.warn("Index file [" + indexFile.getFileName() + "] is full, trying to create another one");
 
@@ -270,14 +297,16 @@ public class IndexService {
     }
 
     /**
+     * 获取或者创建index 文件
      * Retries to get or create index file.
      *
      * @return {@link IndexFile} or null on failure.
      */
     public IndexFile retryGetAndCreateIndexFile() {
         IndexFile indexFile = null;
-
+        //重试获取 index 文件或 创建index文件
         for (int times = 0; null == indexFile && times < MAX_TRY_IDX_CREATE; times++) {
+            //获取或者创建一个最后index文件
             indexFile = this.getAndCreateLastIndexFile();
             if (null != indexFile) {
                 break;
@@ -308,10 +337,12 @@ public class IndexService {
         {
             this.readWriteLock.readLock().lock();
             if (!this.indexFileList.isEmpty()) {
+                //如果 index文件集合不为空 则获取最后一个index文件
                 IndexFile tmp = this.indexFileList.get(this.indexFileList.size() - 1);
                 if (!tmp.isWriteFull()) {
                     indexFile = tmp;
                 } else {
+                    //最后一个index文件满了 则记录 结束的物理偏移量 和 结束的时间  prevIndexFile指向该文件
                     lastUpdateEndPhyOffset = tmp.getEndPhyOffset();
                     lastUpdateIndexTimestamp = tmp.getEndTimestamp();
                     prevIndexFile = tmp;
@@ -326,6 +357,7 @@ public class IndexService {
                 String fileName =
                     this.storePath + File.separator
                         + UtilAll.timeMillisToHumanString(System.currentTimeMillis());
+                //以上一个文件的结束的物理偏移量 为 该文件开始偏移量  和  以上一个文件的结束的时间 为文件的开始时间 创建文件 添加index文件当中
                 indexFile =
                     new IndexFile(fileName, this.hashSlotNum, this.indexNum, lastUpdateEndPhyOffset,
                         lastUpdateIndexTimestamp);
@@ -339,7 +371,7 @@ public class IndexService {
 
             if (indexFile != null) {
                 final IndexFile flushThisFile = prevIndexFile;
-
+                //创建一个后台线程进行已经满的index 文件
                 Thread flushThread = new Thread(new AbstractBrokerRunnable(defaultMessageStore.getBrokerConfig()) {
                     @Override
                     public void run2() {
@@ -361,13 +393,13 @@ public class IndexService {
         }
 
         long indexMsgTimestamp = 0;
-
+        //文件如果 满了记录 index消息时间戳
         if (f.isWriteFull()) {
             indexMsgTimestamp = f.getEndTimestamp();
         }
-
+        //文件刷新 到磁盘
         f.flush();
-
+        //检查点 记录 index消息的时间
         if (indexMsgTimestamp > 0) {
             this.defaultMessageStore.getStoreCheckpoint().setIndexMsgTimestamp(indexMsgTimestamp);
             this.defaultMessageStore.getStoreCheckpoint().flush();
@@ -378,6 +410,9 @@ public class IndexService {
 
     }
 
+    /***
+     * 关闭index文件集合
+     */
     public void shutdown() {
         try {
             this.readWriteLock.writeLock().lock();

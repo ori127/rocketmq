@@ -16,9 +16,24 @@
  */
 package org.apache.rocketmq.client.trace;
 
+/**
+ * 跟踪类型
+ */
 public enum TraceType {
+    /**
+     * 发送
+     */
     Pub,
+    /**
+     * 发送或者消费消息 之前
+     */
     SubBefore,
+    /**
+     *  发送或者消费消息 之后
+     */
     SubAfter,
+    /**
+     * 结束事务
+     */
     EndTransaction,
 }

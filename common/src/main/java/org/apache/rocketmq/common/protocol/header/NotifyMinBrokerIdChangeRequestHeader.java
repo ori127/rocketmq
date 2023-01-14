@@ -22,12 +22,19 @@ import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class NotifyMinBrokerIdChangeRequestHeader implements CommandCustomHeader {
+    /**
+     * broker 节点列表中 的最小 brokerId
+     */
     @CFNullable
     private Long minBrokerId;
-
+    /**
+     * broker Name
+     */
     @CFNullable
     private String brokerName;
-
+    /**
+     * broker 节点列表中 的最小 brokerId 的 broker地址
+     */
     @CFNullable
     private String minBrokerAddr;
 

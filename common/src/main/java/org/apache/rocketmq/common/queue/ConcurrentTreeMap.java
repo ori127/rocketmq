@@ -26,6 +26,7 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
 /**
+ * 线程安全 由 ReentrantLock 来保证
  * thread safe
  */
 public class ConcurrentTreeMap<K, V> {

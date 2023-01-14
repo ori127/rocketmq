@@ -46,6 +46,9 @@ import org.slf4j.LoggerFactory;
 public class NamesrvStartup {
 
     private static InternalLogger log;
+    /**
+     * 属性
+     */
     private static Properties properties = null;
     private static NamesrvConfig namesrvConfig = null;
     private static NettyServerConfig nettyServerConfig = null;
@@ -59,6 +62,7 @@ public class NamesrvStartup {
 
     public static void main0(String[] args) {
         try {
+            // 解析命令行 和 配置文件
             parseCommandlineAndConfigFile(args);
             createAndStartNamesrvController();
         } catch (Throwable e) {
@@ -79,22 +83,29 @@ public class NamesrvStartup {
         }
     }
 
+    /**
+     * 解析命令行 和 配置文件
+     * @param args
+     * @throws Exception
+     */
     public static void parseCommandlineAndConfigFile(String[] args) throws Exception {
+        //设置系统梳理
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
         //PackageConflictDetect.detectFastjson();
-
         Options options = ServerUtil.buildCommandlineOptions(new Options());
+        //解析命令行
         CommandLine commandLine = ServerUtil.parseCmdLine("mqnamesrv", args, buildCommandlineOptions(options), new PosixParser());
         if (null == commandLine) {
             System.exit(-1);
             return;
         }
-
+        //初始化一些配置
         namesrvConfig = new NamesrvConfig();
         nettyServerConfig = new NettyServerConfig();
         nettyClientConfig = new NettyClientConfig();
         nettyServerConfig.setListenPort(9876);
         controllerConfig = new ControllerConfig();
+        //包含命令选项 根据配置解析配置属性
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -112,7 +123,7 @@ public class NamesrvStartup {
                 in.close();
             }
         }
-
+        //进行打印
         if (commandLine.hasOption('p')) {
             MixAll.printObjectProperties(null, namesrvConfig);
             MixAll.printObjectProperties(null, nettyServerConfig);
@@ -120,7 +131,7 @@ public class NamesrvStartup {
             MixAll.printObjectProperties(null, controllerConfig);
             System.exit(0);
         }
-
+        //解析命令行中的属性
         MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), namesrvConfig);
 
         if (null == namesrvConfig.getRocketmqHome()) {
@@ -129,6 +140,7 @@ public class NamesrvStartup {
         }
 
         LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
+        //日志配置文件
         JoranConfigurator configurator = new JoranConfigurator();
         configurator.setContext(lc);
         lc.reset();
@@ -148,9 +160,8 @@ public class NamesrvStartup {
         log.info(tip);
         System.out.printf("%s%n", tip);
     }
-
+    //获取
     public static NamesrvController createNamesrvController() {
-
         final NamesrvController controller = new NamesrvController(namesrvConfig, nettyServerConfig, nettyClientConfig);
         // remember all configs to prevent discard
         controller.getConfiguration().registerConfig(properties);

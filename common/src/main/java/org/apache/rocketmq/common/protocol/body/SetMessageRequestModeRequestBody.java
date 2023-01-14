@@ -21,9 +21,13 @@ import org.apache.rocketmq.common.message.MessageRequestMode;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class SetMessageRequestModeRequestBody extends RemotingSerializable {
-
+    /**
+     * topic 名称
+     */
     private String topic;
-
+    /**
+     *  消费组名称
+     */
     private String consumerGroup;
 
     private MessageRequestMode mode = MessageRequestMode.PULL;

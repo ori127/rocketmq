@@ -16,10 +16,21 @@
  */
 package org.apache.rocketmq.client.consumer;
 
-
+/**
+ * ack 结果
+ */
 public class AckResult {
+    /**
+     * ack状态 确认
+     */
     private AckStatus status;
+    /**
+     * 消息的额外信息
+     */
     private String extraInfo;
+    /**
+     * pop时间
+     */
     private long popTime;
 
     public void setPopTime(long popTime) {

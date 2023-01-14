@@ -21,9 +21,21 @@ import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.message.MessageRequestMode;
 
 public class PopRequest implements MessageRequest {
+    /**
+     * topic
+     */
     private String topic;
+    /**
+     * 消费组
+     */
     private String consumerGroup;
+    /**
+     * 消息队列
+     */
     private MessageQueue messageQueue;
+    /**
+     * 处理队列
+     */
     private PopProcessQueue popProcessQueue;
     private boolean lockedFirst = false;
     private int initMode = ConsumeInitMode.MAX;

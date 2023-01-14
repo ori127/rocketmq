@@ -20,6 +20,9 @@ import java.util.HashMap;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class KVConfigSerializeWrapper extends RemotingSerializable {
+    /**
+     * key 为 namespace
+     */
     private HashMap<String/* Namespace */, HashMap<String/* Key */, String/* Value */>> configTable;
 
     public HashMap<String, HashMap<String, String>> getConfigTable() {

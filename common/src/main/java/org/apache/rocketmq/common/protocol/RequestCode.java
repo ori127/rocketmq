@@ -18,9 +18,13 @@
 package org.apache.rocketmq.common.protocol;
 
 public class RequestCode {
-
+    /**
+     * 发送消息
+     */
     public static final int SEND_MESSAGE = 10;
-
+    /**
+     * 获取消息 code
+     */
     public static final int PULL_MESSAGE = 11;
 
     public static final int QUERY_MESSAGE = 12;
@@ -102,6 +106,9 @@ public class RequestCode {
     public static final int REGISTER_BROKER = 103;
 
     public static final int UNREGISTER_BROKER = 104;
+    /**
+     * 获取topic 路由信息 code
+     */
     public static final int GET_ROUTEINFO_BY_TOPIC = 105;
 
     public static final int GET_BROKER_CLUSTER_INFO = 106;
@@ -162,7 +169,9 @@ public class RequestCode {
 
     public static final int QUERY_CORRECTION_OFFSET = 308;
     public static final int CONSUME_MESSAGE_DIRECTLY = 309;
-
+    /**
+     * 发送消息 使用短变量名加快FastJson反序列化过程。
+     */
     public static final int SEND_MESSAGE_V2 = 310;
 
     public static final int GET_UNIT_TOPIC_LIST = 311;
@@ -199,9 +208,13 @@ public class RequestCode {
      * resume logic of checking half messages that have been put in TRANS_CHECK_MAXTIME_TOPIC before
      */
     public static final int RESUME_CHECK_HALF_MESSAGE = 323;
-
+    /**
+     * 回应消息
+     */
     public static final int SEND_REPLY_MESSAGE = 324;
-
+    /**
+     * 回应消息 使用短变量名加快FastJson反序列化过程。
+     */
     public static final int SEND_REPLY_MESSAGE_V2 = 325;
 
     public static final int PUSH_REPLY_MESSAGE_TO_CLIENT = 326;

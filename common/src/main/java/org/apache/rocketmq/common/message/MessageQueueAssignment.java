@@ -22,9 +22,13 @@ import java.util.Map;
 public class MessageQueueAssignment implements Serializable {
 
     private static final long serialVersionUID = 8092600270527861645L;
-
+    /**
+     * 消息队列
+     */
     private MessageQueue messageQueue;
-
+    /**
+     * 消息获取模式
+     */
     private MessageRequestMode mode = MessageRequestMode.PULL;
 
     private Map<String, String> attachments;

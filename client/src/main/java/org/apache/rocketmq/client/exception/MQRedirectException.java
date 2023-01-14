@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.client.exception;
 
+/**
+ * 用于控制流程 跳转的异常
+ */
 public class MQRedirectException extends MQBrokerException {
     private static final StackTraceElement[] UNASSIGNED_STACK = new StackTraceElement[0];
 

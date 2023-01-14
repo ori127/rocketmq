@@ -20,9 +20,18 @@ import java.util.List;
 import org.apache.rocketmq.common.message.MessageExt;
 
 public class PopResult {
+    /**
+     * 获取的消息集合
+     */
     private List<MessageExt> msgFoundList;
     private PopStatus popStatus;
+    /**
+     * pop 时间
+     */
     private long popTime;
+    /**
+     * 不可见时间
+     */
     private long invisibleTime;
     private long restNum;
 

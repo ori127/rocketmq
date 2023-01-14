@@ -201,11 +201,18 @@ public class TopicQueueMappingUtils {
         return new AbstractMap.SimpleEntry<Long, Integer>(maxEpoch, maxNum);
     }
 
+    /**
+     * 添加__syslo__ 前缀
+     * @param scope
+     * @return
+     */
     public static String getMockBrokerName(String scope) {
         assert scope != null;
+        //__syslo__global__
         if (scope.equals(MixAll.METADATA_SCOPE_GLOBAL)) {
             return MixAll.LOGICAL_QUEUE_MOCK_BROKER_PREFIX + scope.substring(2);
         } else {
+            //__syslo__scope
             return MixAll.LOGICAL_QUEUE_MOCK_BROKER_PREFIX + scope;
         }
     }
@@ -267,6 +274,7 @@ public class TopicQueueMappingUtils {
                     || item.getQueueId() < 0) {
                 throw new RuntimeException("The field is illegal, should not be negative");
             }
+            //不是 最前面的 2个 也不是 最后的 2 个
             if (items.size() >= 2
                     && i <= items.size() - 2
                     && items.get(i).getLogicOffset() < 0) {
@@ -682,7 +690,12 @@ public class TopicQueueMappingUtils {
         return null;
     }
 
-
+    /**
+     * 检查是否是 leader
+     * @param items
+     * @param mappingDetail
+     * @return
+     */
     public static boolean checkIfLeader(List<LogicQueueMappingItem> items, TopicQueueMappingDetail mappingDetail) {
         if (items == null
             || mappingDetail == null

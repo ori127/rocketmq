@@ -19,11 +19,23 @@ package org.apache.rocketmq.common;
 public class KeyBuilder {
     public static final int POP_ORDER_REVIVE_QUEUE = 999;
 
+    /**
+     * 构建重试 topic %RETRY%cid_topic
+     * @param topic
+     * @param cid
+     * @return
+     */
     public static String buildPopRetryTopic(String topic, String cid) {
         return MixAll.RETRY_GROUP_TOPIC_PREFIX + cid + "_" + topic;
     }
-
+    /**
+     * 去掉消息 "%RETRY%cid"
+     * @param topic
+     * @param cid
+     * @return
+     */
     public static String parseNormalTopic(String topic, String cid) {
+        //如果topic以 "%RETRY%“前缀 则 去掉 "%RETRY%cid" 前缀
         if (topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
             return topic.substring((MixAll.RETRY_GROUP_TOPIC_PREFIX + cid + "_").length());
         } else {

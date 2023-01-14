@@ -33,10 +33,14 @@ import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class SubscriptionGroupManager extends ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
-
+    /**
+     * key 为 组名 , value 为 SubscriptionGroupConfig
+     */
     private final ConcurrentMap<String, SubscriptionGroupConfig> subscriptionGroupTable =
         new ConcurrentHashMap<String, SubscriptionGroupConfig>(1024);
-
+    /**
+     * key 为 组名 ,value.key 为 topic , value.value 为 topicForbidden
+     */
     private final ConcurrentMap<String, ConcurrentMap<String, Integer>> forbiddenTable =
         new ConcurrentHashMap<String, ConcurrentMap<String, Integer>>(4);
 
@@ -54,24 +58,28 @@ public class SubscriptionGroupManager extends ConfigManager {
 
     private void init() {
         {
+            //TOOLS_CONSUMER 订阅配置
             SubscriptionGroupConfig subscriptionGroupConfig = new SubscriptionGroupConfig();
             subscriptionGroupConfig.setGroupName(MixAll.TOOLS_CONSUMER_GROUP);
             this.subscriptionGroupTable.put(MixAll.TOOLS_CONSUMER_GROUP, subscriptionGroupConfig);
         }
 
         {
+            //FILTERSRV_CONSUMER 订阅配置
             SubscriptionGroupConfig subscriptionGroupConfig = new SubscriptionGroupConfig();
             subscriptionGroupConfig.setGroupName(MixAll.FILTERSRV_CONSUMER_GROUP);
             this.subscriptionGroupTable.put(MixAll.FILTERSRV_CONSUMER_GROUP, subscriptionGroupConfig);
         }
 
         {
+            //SELF_TEST_C_GROUP 订阅配置
             SubscriptionGroupConfig subscriptionGroupConfig = new SubscriptionGroupConfig();
             subscriptionGroupConfig.setGroupName(MixAll.SELF_TEST_CONSUMER_GROUP);
             this.subscriptionGroupTable.put(MixAll.SELF_TEST_CONSUMER_GROUP, subscriptionGroupConfig);
         }
 
         {
+            //CID_ONS-HTTP-PROXY 订阅配置
             SubscriptionGroupConfig subscriptionGroupConfig = new SubscriptionGroupConfig();
             subscriptionGroupConfig.setGroupName(MixAll.ONS_HTTP_PROXY_GROUP);
             subscriptionGroupConfig.setConsumeBroadcastEnable(true);
@@ -79,6 +87,7 @@ public class SubscriptionGroupManager extends ConfigManager {
         }
 
         {
+            //CID_ONSAPI_PULL 订阅配置
             SubscriptionGroupConfig subscriptionGroupConfig = new SubscriptionGroupConfig();
             subscriptionGroupConfig.setGroupName(MixAll.CID_ONSAPI_PULL_GROUP);
             subscriptionGroupConfig.setConsumeBroadcastEnable(true);
@@ -86,6 +95,7 @@ public class SubscriptionGroupManager extends ConfigManager {
         }
 
         {
+            //CID_ONSAPI_PERMISSION 订阅配置
             SubscriptionGroupConfig subscriptionGroupConfig = new SubscriptionGroupConfig();
             subscriptionGroupConfig.setGroupName(MixAll.CID_ONSAPI_PERMISSION_GROUP);
             subscriptionGroupConfig.setConsumeBroadcastEnable(true);
@@ -93,6 +103,7 @@ public class SubscriptionGroupManager extends ConfigManager {
         }
 
         {
+            //CID_ONSAPI_OWNER 订阅配置
             SubscriptionGroupConfig subscriptionGroupConfig = new SubscriptionGroupConfig();
             subscriptionGroupConfig.setGroupName(MixAll.CID_ONSAPI_OWNER_GROUP);
             subscriptionGroupConfig.setConsumeBroadcastEnable(true);
@@ -100,6 +111,7 @@ public class SubscriptionGroupManager extends ConfigManager {
         }
 
         {
+            //CID_RMQ_SYS_TRANS 订阅配置
             SubscriptionGroupConfig subscriptionGroupConfig = new SubscriptionGroupConfig();
             subscriptionGroupConfig.setGroupName(MixAll.CID_SYS_RMQ_TRANS);
             subscriptionGroupConfig.setConsumeBroadcastEnable(true);
@@ -107,6 +119,10 @@ public class SubscriptionGroupManager extends ConfigManager {
         }
     }
 
+    /**
+     * 更新订阅配置
+     * @param config
+     */
     public void updateSubscriptionGroupConfig(final SubscriptionGroupConfig config) {
         SubscriptionGroupConfig old = this.subscriptionGroupTable.put(config.getGroupName(), config);
         if (old != null) {
@@ -130,6 +146,7 @@ public class SubscriptionGroupManager extends ConfigManager {
     }
 
     /**
+     * 添加 forbiddenIndex 更新 该 组 该 topic 的 forbidden 增加版本进行持久化
      * set the bit value to 1 at the specific index (from 0)
      *
      * @param group
@@ -143,6 +160,7 @@ public class SubscriptionGroupManager extends ConfigManager {
     }
 
     /**
+     * 清楚 forbiddenIndex 更新 该 组 该 topic 的 forbidden 增加版本进行持久化
      * clear the bit value to 0 at the specific index (from 0)
      *
      * @param group
@@ -161,6 +179,12 @@ public class SubscriptionGroupManager extends ConfigManager {
         return (topicForbidden & bitForbidden) == bitForbidden;
     }
 
+    /**
+     * 根据该 group 和 topic 获取 topicForbidden
+     * @param group
+     * @param topic
+     * @return
+     */
     public int getForbidden(String group, String topic) {
         ConcurrentMap<String, Integer> topicForbiddens = this.forbiddenTable.get(group);
         if (topicForbiddens == null) {
@@ -173,18 +197,25 @@ public class SubscriptionGroupManager extends ConfigManager {
         return topicForbidden;
     }
 
+    /**
+     * 替换 该 组 该 topic 的 forbidden 增加版本进行持久化
+     * @param group
+     * @param topic
+     * @param forbidden
+     */
     private void updateForbiddenValue(String group, String topic, Integer forbidden) {
         if (forbidden == null || forbidden <= 0) {
             this.forbiddenTable.remove(group);
             log.info("clear group forbidden, {}@{} ", group, topic);
             return;
         }
-
+        //获取该 组 的 topicsPermMap 如果不存则 创建该  组 的 topicsPermMap
         ConcurrentMap<String, Integer> topicsPermMap = this.forbiddenTable.get(group);
         if (topicsPermMap == null) {
             this.forbiddenTable.putIfAbsent(group, new ConcurrentHashMap<String, Integer>());
             topicsPermMap = this.forbiddenTable.get(group);
         }
+        //替换 该 组 该 topic 的 forbidden 增加版本进行持久化
         Integer old = topicsPermMap.put(topic, forbidden);
         if (old != null) {
             log.info("set group forbidden, {}@{} old: {} new: {}", group, topic, old, forbidden);
@@ -197,6 +228,10 @@ public class SubscriptionGroupManager extends ConfigManager {
         this.persist();
     }
 
+    /**
+     * 禁止该组进行消费
+     * @param groupName
+     */
     public void disableConsume(final String groupName) {
         SubscriptionGroupConfig old = this.subscriptionGroupTable.get(groupName);
         if (old != null) {
@@ -206,9 +241,16 @@ public class SubscriptionGroupManager extends ConfigManager {
         }
     }
 
+    /**
+     * 获取该组 的订阅配置 如果是自动创建订阅组 或者 是系统的消费组 则自动创建 订阅组 配置 进行持久化
+     * @param group
+     * @return
+     */
     public SubscriptionGroupConfig findSubscriptionGroupConfig(final String group) {
+        //获取该组 的订阅配置
         SubscriptionGroupConfig subscriptionGroupConfig = this.subscriptionGroupTable.get(group);
         if (null == subscriptionGroupConfig) {
+            //如果是自动创建订阅组 或者 是系统的消费组 则自动创建 订阅组 配置 进行持久化
             if (brokerController.getBrokerConfig().isAutoCreateSubscriptionGroup() || MixAll.isSysConsumerGroup(group)) {
                 subscriptionGroupConfig = new SubscriptionGroupConfig();
                 subscriptionGroupConfig.setGroupName(group);
@@ -230,12 +272,20 @@ public class SubscriptionGroupManager extends ConfigManager {
         return this.encode(false);
     }
 
+    /**
+     *   "/config/subscriptionGroup.json"
+     * @return
+     */
     @Override
     public String configFilePath() {
         return BrokerPathConfigHelper.getSubscriptionGroupPath(this.brokerController.getMessageStoreConfig()
             .getStorePathRootDir());
     }
 
+    /**
+     * 进行解码 加载配置
+     * @param jsonString
+     */
     @Override
     public void decode(String jsonString) {
         if (jsonString != null) {
@@ -255,6 +305,10 @@ public class SubscriptionGroupManager extends ConfigManager {
         return RemotingSerializable.toJson(this, prettyFormat);
     }
 
+    /**
+     * 日志 记录 subscriptionGroupTable
+     * @param sgm
+     */
     private void printLoadDataWhenFirstBoot(final SubscriptionGroupManager sgm) {
         Iterator<Entry<String, SubscriptionGroupConfig>> it = sgm.getSubscriptionGroupTable().entrySet().iterator();
         while (it.hasNext()) {

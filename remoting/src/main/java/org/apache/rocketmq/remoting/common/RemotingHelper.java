@@ -156,6 +156,11 @@ public class RemotingHelper {
         }
     }
 
+    /**
+     * 解析地址
+     * @param channel
+     * @return
+     */
     public static String parseChannelRemoteAddr(final Channel channel) {
         if (null == channel) {
             return "";
@@ -202,6 +207,11 @@ public class RemotingHelper {
         return addressSplits[0];
     }
 
+    /**
+     * 解析socketAddress 地址  InetSocketAddress 默认 toString 是 "hostName/IP:port" 转成 "IP:port"
+     * @param socketAddress
+     * @return
+     */
     public static String parseSocketAddressAddr(SocketAddress socketAddress) {
         if (socketAddress != null) {
             // Default toString of InetSocketAddress is "hostName/IP:port"

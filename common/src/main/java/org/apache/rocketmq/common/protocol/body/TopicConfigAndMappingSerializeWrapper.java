@@ -24,7 +24,13 @@ import org.apache.rocketmq.common.statictopic.TopicQueueMappingInfo;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * topic配置 和 映射管理
+ */
 public class TopicConfigAndMappingSerializeWrapper extends TopicConfigSerializeWrapper {
+    /**
+     * key 为 topic,value 为 TopicQueueMappingInfo
+     */
     private Map<String/* topic */, TopicQueueMappingInfo> topicQueueMappingInfoMap = new ConcurrentHashMap<String, TopicQueueMappingInfo>();
 
     private Map<String/* topic */, TopicQueueMappingDetail> topicQueueMappingDetailMap = new ConcurrentHashMap<String, TopicQueueMappingDetail>();

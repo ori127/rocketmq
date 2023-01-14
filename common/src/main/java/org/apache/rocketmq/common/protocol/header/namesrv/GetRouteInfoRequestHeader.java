@@ -29,7 +29,9 @@ public class GetRouteInfoRequestHeader implements CommandCustomHeader {
 
     @CFNotNull
     private String topic;
-
+    /**
+     * 是否仅接受标准的 json
+     */
     @CFNullable
     private Boolean acceptStandardJsonOnly;
 

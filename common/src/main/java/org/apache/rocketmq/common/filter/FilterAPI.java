@@ -20,12 +20,22 @@ import java.net.URL;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 
 public class FilterAPI {
+    /**
+     * 根据类名获取 URL
+     * @param className
+     * @return
+     */
     public static URL classFile(final String className) {
         final String javaSource = simpleClassName(className) + ".java";
         URL url = FilterAPI.class.getClassLoader().getResource(javaSource);
         return url;
     }
 
+    /**
+     * 获取类名
+     * @param className
+     * @return
+     */
     public static String simpleClassName(final String className) {
         String simple = className;
         int index = className.lastIndexOf(".");
@@ -36,14 +46,22 @@ public class FilterAPI {
         return simple;
     }
 
+    /**
+     * 构建 SubscriptionData expressionType 默认为 Tag 以 TAG 标签过滤
+     * @param topic
+     * @param subString
+     * @return
+     * @throws Exception
+     */
     public static SubscriptionData buildSubscriptionData(String topic, String subString) throws Exception {
         SubscriptionData subscriptionData = new SubscriptionData();
         subscriptionData.setTopic(topic);
         subscriptionData.setSubString(subString);
-
+        //如果 订阅的 的 subString 为 null 或者 "" 或者 "*" 则设置 成 "*"
         if (null == subString || subString.equals(SubscriptionData.SUB_ALL) || subString.length() == 0) {
             subscriptionData.setSubString(SubscriptionData.SUB_ALL);
         } else {
+            //根据 "||" subString 划分
             String[] tags = subString.split("\\|\\|");
             if (tags.length > 0) {
                 for (String tag : tags) {
@@ -62,7 +80,14 @@ public class FilterAPI {
 
         return subscriptionData;
     }
-
+    /**
+     * 构建 SubscriptionData expressionType Type以 Tag 以 TAG标签过滤 否则 以 SQL 做为过滤
+     * @param topic
+     * @param subString
+     * @param type
+     * @return
+     * @throws Exception
+     */
     public static SubscriptionData build(final String topic, final String subString,
         final String type) throws Exception {
         if (ExpressionType.TAG.equals(type) || type == null) {

@@ -45,13 +45,21 @@ import static org.apache.rocketmq.remoting.protocol.RemotingCommand.buildErrorRe
 
 public class TopicQueueMappingManager extends ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    /**
+     * 上锁时间
+     */
     private static final long LOCK_TIMEOUT_MILLIS = 3000;
+    /**
+     * 锁
+     */
     private transient final Lock lock = new ReentrantLock();
 
     //this data version should be equal to the TopicConfigManager
     private final DataVersion dataVersion = new DataVersion();
     private transient BrokerController brokerController;
-
+    /**
+     * key 为 topic , value 为 TopicQueueMappingDetail  topic => TopicQueueMappingDetail
+     */
     private final ConcurrentMap<String, TopicQueueMappingDetail> topicQueueMappingTable = new ConcurrentHashMap<>();
 
 
@@ -64,7 +72,7 @@ public class TopicQueueMappingManager extends ConfigManager {
         boolean updated = false;
         TopicQueueMappingDetail oldDetail = null;
         try {
-
+            //上锁
             if (lock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 locked = true;
             } else {
@@ -73,12 +81,13 @@ public class TopicQueueMappingManager extends ConfigManager {
             if (newDetail == null) {
                 return;
             }
+            //判断是否是新的映射是否对应 brokerName
             assert newDetail.getBname().equals(this.brokerController.getBrokerConfig().getBrokerName());
-
+            //检查偏移量
             newDetail.getHostedQueues().forEach((queueId, items) -> {
                 TopicQueueMappingUtils.checkLogicQueueMappingItemOffset(items);
             });
-
+            //获取旧的映射详情 不存在旧的映射 就进行添加
             oldDetail = topicQueueMappingTable.get(newDetail.getTopic());
             if (oldDetail == null) {
                 topicQueueMappingTable.put(newDetail.getTopic(), newDetail);
@@ -86,6 +95,7 @@ public class TopicQueueMappingManager extends ConfigManager {
                 return;
             }
             if (force) {
+                //将旧详情当中 LogicQueueMappingItem 添加到 新的详情当中
                 //bakeup the old items
                 oldDetail.getHostedQueues().forEach((queueId, items) -> {
                     newDetail.getHostedQueues().putIfAbsent(queueId, items);
@@ -101,10 +111,14 @@ public class TopicQueueMappingManager extends ConfigManager {
             if (!newDetail.getScope().equals(oldDetail.getScope())) {
                 throw new RuntimeException(String.format("Can't accept data with unmatched scope %s != %s", newDetail.getScope(), oldDetail.getScope()));
             }
+            //新的详情  和 旧的详情 时代是否相等
             boolean epochEqual = newDetail.getEpoch() == oldDetail.getEpoch();
+            //遍历旧的详情 LogicQueueMappingItem
             for (Integer globalId : oldDetail.getHostedQueues().keySet()) {
                 List<LogicQueueMappingItem> oldItems = oldDetail.getHostedQueues().get(globalId);
                 List<LogicQueueMappingItem> newItems = newDetail.getHostedQueues().get(globalId);
+                //新信息详情 LogicQueueMappingItem 为 null 如果时代相同 不允许
+                //如果时代不相同 添加到 新的详情当中
                 if (newItems == null) {
                     if (epochEqual) {
                         throw new RuntimeException("Cannot accept equal epoch with null data");
@@ -115,12 +129,15 @@ public class TopicQueueMappingManager extends ConfigManager {
                     TopicQueueMappingUtils.makeSureLogicQueueMappingItemImmutable(oldItems, newItems, epochEqual, isClean);
                 }
             }
+            //进行 topic TopicQueueMappingDetail 映射
             topicQueueMappingTable.put(newDetail.getTopic(), newDetail);
             updated = true;
         }  finally {
+            //解锁
             if (locked) {
                 this.lock.unlock();
             }
+            //如果更新 并且 flush 则 增加版本 进行持久化
             if (updated && flush) {
                 this.dataVersion.nextVersion();
                 this.persist();
@@ -130,6 +147,10 @@ public class TopicQueueMappingManager extends ConfigManager {
 
     }
 
+    /**
+     * 删除topic 对应的 TopicQueueMappingDetail 然后增加版本 进行持久化
+     * @param topic
+     */
     public void delete(final String topic) {
         TopicQueueMappingDetail old = this.topicQueueMappingTable.remove(topic);
         if (old != null) {
@@ -141,10 +162,20 @@ public class TopicQueueMappingManager extends ConfigManager {
         }
     }
 
+    /**
+     * 获取该 topic 的 TopicQueueMappingDetail
+     * @param topic
+     * @return
+     */
     public TopicQueueMappingDetail getTopicQueueMapping(String topic) {
         return topicQueueMappingTable.get(topic);
     }
 
+    /**
+     * 进行序列化
+     * @param pretty
+     * @return
+     */
     @Override
     public String encode(boolean pretty) {
         TopicQueueMappingSerializeWrapper wrapper = new TopicQueueMappingSerializeWrapper();
@@ -160,6 +191,7 @@ public class TopicQueueMappingManager extends ConfigManager {
 
     @Override
     public String configFilePath() {
+        // 获取配置文件路径 "/config/topicQueueMapping.json"
         return BrokerPathConfigHelper.getTopicQueueMappingPath(this.brokerController.getMessageStoreConfig()
             .getStorePathRootDir());
     }
@@ -190,16 +222,18 @@ public class TopicQueueMappingManager extends ConfigManager {
     //Do not return a null context
     public TopicQueueMappingContext buildTopicQueueMappingContext(TopicRequestHeader requestHeader, boolean selectOneWhenMiss) {
         // if lo is set to false explicitly, it maybe the forwarded request
+        //如果lo显式设置为false，则可能是转发的请求
         if (requestHeader.getLo() != null
                 && Boolean.FALSE.equals(requestHeader.getLo())) {
             return new TopicQueueMappingContext(requestHeader.getTopic(), null, null, null, null);
         }
         String topic = requestHeader.getTopic();
         Integer globalId = null;
+        //globalId 为 队列的 id
         if (requestHeader instanceof  TopicQueueRequestHeader) {
             globalId = ((TopicQueueRequestHeader) requestHeader).getQueueId();
         }
-
+        //获取topic 对应的 TopicQueueMappingDetail 比较 brokerName
         TopicQueueMappingDetail mappingDetail = getTopicQueueMapping(topic);
         if (mappingDetail == null) {
             //it is not static topic
@@ -228,7 +262,7 @@ public class TopicQueueMappingManager extends ConfigManager {
         if (globalId < 0) {
             return new TopicQueueMappingContext(topic, globalId,  mappingDetail, null, null);
         }
-
+        //获取 LogicQueueMappingItem 区最后一个 LogicQueueMappingItem 作为 leaderItem
         List<LogicQueueMappingItem> mappingItemList = TopicQueueMappingDetail.getMappingInfo(mappingDetail, globalId);
         LogicQueueMappingItem leaderItem = null;
         if (mappingItemList != null

@@ -18,19 +18,23 @@ package org.apache.rocketmq.client.consumer;
 
 public enum PopStatus {
     /**
+     * 找到消息
      * Founded
      */
     FOUND,
     /**
+     * 轮训时间结束没有获取新消息
      * No new message can be pull after polling time out
      * delete after next realease
      */
     NO_NEW_MSG,
     /**
+     * 轮训池已经满了
      * polling pool is full, do not try again immediately.
      */
     POLLING_FULL,
     /**
+     * 轮训时间到了 但是没有消息
      * polling time out but no message find
      */
     POLLING_NOT_FOUND

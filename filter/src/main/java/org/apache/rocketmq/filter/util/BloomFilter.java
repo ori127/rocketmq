@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
+ * 布隆过滤器
  * Simple implement of bloom filter.
  */
 public class BloomFilter {

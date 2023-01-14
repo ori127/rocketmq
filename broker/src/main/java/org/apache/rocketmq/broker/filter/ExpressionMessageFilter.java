@@ -34,6 +34,9 @@ import java.util.Map;
 public class ExpressionMessageFilter implements MessageFilter {
 
     protected static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.FILTER_LOGGER_NAME);
+    /**
+     * 订阅信息
+     */
 
     protected final SubscriptionData subscriptionData;
     protected final ConsumerFilterData consumerFilterData;

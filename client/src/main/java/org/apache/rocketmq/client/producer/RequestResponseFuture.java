@@ -24,6 +24,9 @@ import org.apache.rocketmq.common.message.Message;
 public class RequestResponseFuture {
     private final String correlationId;
     private final RequestCallback requestCallback;
+    /**
+     * 开始时间
+     */
     private final long beginTimestamp = System.currentTimeMillis();
     private final Message requestMsg = null;
     private long timeoutMillis;

@@ -18,19 +18,41 @@ package org.apache.rocketmq.common.message;
 
 import java.util.HashSet;
 
+/**
+ * 消息的一些常量属性
+ */
 public class MessageConst {
     public static final String PROPERTY_KEYS = "KEYS";
     public static final String PROPERTY_TAGS = "TAGS";
     public static final String PROPERTY_WAIT_STORE_MSG_OK = "WAIT";
+    /**
+     * 延迟等级
+     */
     public static final String PROPERTY_DELAY_TIME_LEVEL = "DELAY";
     public static final String PROPERTY_RETRY_TOPIC = "RETRY_TOPIC";
+    /**
+     * 真实的 topic
+     */
+
     public static final String PROPERTY_REAL_TOPIC = "REAL_TOPIC";
+    /**
+     * 真实的消息队列id
+     */
     public static final String PROPERTY_REAL_QUEUE_ID = "REAL_QID";
+    /**
+     * 消息的事务标记
+     */
     public static final String PROPERTY_TRANSACTION_PREPARED = "TRAN_MSG";
+    /**
+     * 生产者名称
+     */
     public static final String PROPERTY_PRODUCER_GROUP = "PGROUP";
     public static final String PROPERTY_MIN_OFFSET = "MIN_OFFSET";
     public static final String PROPERTY_MAX_OFFSET = "MAX_OFFSET";
     public static final String PROPERTY_BUYER_ID = "BUYER_ID";
+    /**
+     * 原始消息的id
+     */
     public static final String PROPERTY_ORIGIN_MESSAGE_ID = "ORIGIN_MESSAGE_ID";
     public static final String PROPERTY_TRANSFER_FLAG = "TRANSFER_FLAG";
     public static final String PROPERTY_CORRECTION_FLAG = "CORRECTION_FLAG";
@@ -38,6 +60,9 @@ public class MessageConst {
     public static final String PROPERTY_RECONSUME_TIME = "RECONSUME_TIME";
     public static final String PROPERTY_MSG_REGION = "MSG_REGION";
     public static final String PROPERTY_TRACE_SWITCH = "TRACE_ON";
+    /**
+     * 作为事务Id
+     */
     public static final String PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX = "UNIQ_KEY";
     public static final String PROPERTY_EXTEND_UNIQ_INFO = "EXTEND_UNIQ_INFO";
     public static final String PROPERTY_MAX_RECONSUME_TIMES = "MAX_RECONSUME_TIMES";
@@ -51,12 +76,19 @@ public class MessageConst {
     public static final String PROPERTY_TRANSACTION_CHECK_TIMES = "TRANSACTION_CHECK_TIMES";
     public static final String PROPERTY_INSTANCE_ID = "INSTANCE_ID";
     public static final String PROPERTY_CORRELATION_ID = "CORRELATION_ID";
+    /**
+     * 回复客户端id
+     */
     public static final String PROPERTY_MESSAGE_REPLY_TO_CLIENT = "REPLY_TO_CLIENT";
+    /**
+     * 超时时间
+     */
     public static final String PROPERTY_MESSAGE_TTL = "TTL";
     public static final String PROPERTY_REPLY_MESSAGE_ARRIVE_TIME = "ARRIVE_TIME";
     public static final String PROPERTY_PUSH_REPLY_TIME = "PUSH_REPLY_TIME";
     public static final String PROPERTY_CLUSTER = "CLUSTER";
     public static final String PROPERTY_MESSAGE_TYPE = "MSG_TYPE";
+
     public static final String PROPERTY_POP_CK = "POP_CK";
     public static final String PROPERTY_POP_CK_OFFSET = "POP_CK_OFFSET";
     public static final String PROPERTY_FIRST_POP_TIME = "1ST_POP_TIME";
@@ -85,7 +117,9 @@ public class MessageConst {
      * the transient property key of groupSysFlag (set by client when pulling messages)
      */
     public static final String PROPERTY_TRANSIENT_GROUP_CONFIG = PROPERTY_TRANSIENT_PREFIX + "GROUP_SYS_FLAG";
-
+    /**
+     * key 的 分割符
+     */
     public static final String KEY_SEPARATOR = " ";
 
     public static final HashSet<String> STRING_HASH_SET = new HashSet<>(64);

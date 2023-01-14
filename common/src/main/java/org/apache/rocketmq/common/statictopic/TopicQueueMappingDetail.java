@@ -28,6 +28,9 @@ public class TopicQueueMappingDetail extends TopicQueueMappingInfo {
 
     // the mapping info in current broker, do not register to nameserver
     // make sure this value is not null
+    /**
+     * FIXME:: key global id 这 是指什么 id
+     */
     private ConcurrentMap<Integer/*global id*/, List<LogicQueueMappingItem>> hostedQueues = new ConcurrentHashMap<Integer, List<LogicQueueMappingItem>>();
 
     //make sure there is a default constructor
@@ -52,7 +55,7 @@ public class TopicQueueMappingDetail extends TopicQueueMappingInfo {
     public static List<LogicQueueMappingItem> getMappingInfo(TopicQueueMappingDetail mappingDetail, Integer globalId) {
         return mappingDetail.hostedQueues.get(globalId);
     }
-
+    //TODO::现在不是很清楚 这个是在干什么
     public static ConcurrentMap<Integer, Integer> buildIdMap(TopicQueueMappingDetail mappingDetail, int level) {
         //level 0 means current leader in this broker
         //level 1 means previous leader in this broker, reserved for
@@ -87,7 +90,11 @@ public class TopicQueueMappingDetail extends TopicQueueMappingInfo {
         return item.computeMaxStaticQueueOffset();
     }
 
-
+    /**
+     * 克隆为TopicQueueMappingInfo
+     * @param mappingDetail
+     * @return
+     */
     public static TopicQueueMappingInfo cloneAsMappingInfo(TopicQueueMappingDetail mappingDetail) {
         TopicQueueMappingInfo topicQueueMappingInfo = new TopicQueueMappingInfo(mappingDetail.topic, mappingDetail.totalQueues, mappingDetail.bname, mappingDetail.epoch);
         topicQueueMappingInfo.currIdMap = TopicQueueMappingDetail.buildIdMap(mappingDetail, LEVEL_0);

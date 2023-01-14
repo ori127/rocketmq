@@ -33,8 +33,17 @@ public class StoreCheckpoint {
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
     private final MappedByteBuffer mappedByteBuffer;
+    /**
+     * 物理消息存储时间
+     */
     private volatile long physicMsgTimestamp = 0;
+    /**
+     * 逻辑消息存储时间
+     */
     private volatile long logicsMsgTimestamp = 0;
+    /**
+     * index 消息的 时间
+     */
     private volatile long indexMsgTimestamp = 0;
     private volatile long masterFlushedOffset = 0;
 

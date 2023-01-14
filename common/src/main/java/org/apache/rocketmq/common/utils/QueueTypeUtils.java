@@ -25,23 +25,33 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class QueueTypeUtils {
-
+    /**
+     * 判读是否是比例消费队列
+     * @param topicConfig
+     * @return
+     */
     public static boolean isBatchCq(Optional<TopicConfig> topicConfig) {
         return Objects.equals(CQType.BatchCQ, getCQType(topicConfig));
     }
 
+    /**
+     * 根据 topic 配置 获取 消费队列的类型
+     * @param topicConfig
+     * @return
+     */
     public static CQType getCQType(Optional<TopicConfig> topicConfig) {
+        //配置不存在 则是 SimpleCQ
         if (!topicConfig.isPresent()) {
             return CQType.valueOf(TopicAttributes.QUEUE_TYPE_ATTRIBUTE.getDefaultValue());
         }
-
+        //属性名称 queue.type
         String attributeName = TopicAttributes.QUEUE_TYPE_ATTRIBUTE.getName();
-
+        // 获取topic 属性 若果属性为 空则采用 SimpleCQ
         Map<String, String> attributes = topicConfig.get().getAttributes();
         if (attributes == null || attributes.size() == 0) {
             return CQType.valueOf(TopicAttributes.QUEUE_TYPE_ATTRIBUTE.getDefaultValue());
         }
-
+        //根据属性获取 消费 队列 类型
         if (attributes.containsKey(attributeName)) {
             return CQType.valueOf(attributes.get(attributeName));
         } else {

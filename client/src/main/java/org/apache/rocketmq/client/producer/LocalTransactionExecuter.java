@@ -19,6 +19,7 @@ package org.apache.rocketmq.client.producer;
 import org.apache.rocketmq.common.message.Message;
 
 /**
+ * 当发送 半事务成功, 将会调用该方法执行本地事务
  * @deprecated This interface will be removed in the version 5.0.0, interface {@link TransactionListener} is recommended.
  */
 @Deprecated

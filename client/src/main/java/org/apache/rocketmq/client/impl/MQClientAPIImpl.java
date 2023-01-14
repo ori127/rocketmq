@@ -224,6 +224,9 @@ import static org.apache.rocketmq.remoting.protocol.RemotingSysResponseCode.SUCC
 
 public class MQClientAPIImpl implements NameServerUpdateCallback {
     private final static InternalLogger log = ClientLogger.getLog();
+    /**
+     * 序列化的时候 使用短变量名加快FastJson反序列化过程。
+     */
     private static boolean sendSmartMsg =
         Boolean.parseBoolean(System.getProperty("org.apache.rocketmq.client.sendSmartMsg", "true"));
 
@@ -231,10 +234,22 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
     }
 
+    /**
+     * NettyRemotingClient 客户端
+     */
     private final RemotingClient remotingClient;
+    /**
+     * 用于获取 NameServer 地址
+     */
     private final TopAddressing topAddressing;
     private final ClientRemotingProcessor clientRemotingProcessor;
+    /**
+     * NameServer
+     */
     private String nameSrvAddr = null;
+    /**
+     * 客户端配置
+     */
     private ClientConfig clientConfig;
 
     public MQClientAPIImpl(final NettyClientConfig nettyClientConfig,
@@ -267,6 +282,10 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         this.remotingClient.registerProcessor(RequestCode.PUSH_REPLY_MESSAGE_TO_CLIENT, this.clientRemotingProcessor, null);
     }
 
+    /**
+     * 获取 NameServer 地址 集合
+     * @return
+     */
     public List<String> getNameServerAddressList() {
         return this.remotingClient.getNameServerAddressList();
     }
@@ -275,6 +294,10 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return remotingClient;
     }
 
+    /**
+     * 获取 NameServer 地址
+     * @return
+     */
     public String fetchNameServerAddr() {
         try {
             String addrs = this.topAddressing.fetchNSAddr();
@@ -292,6 +315,11 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return nameSrvAddr;
     }
 
+    /**
+     * 更新 NameServer Address
+     * @param namesrvAddress
+     * @return
+     */
     @Override
     public String onNameServerAddressChange(String namesrvAddress) {
         if (namesrvAddress != null) {
@@ -305,15 +333,27 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return nameSrvAddr;
     }
 
+    /**
+     *以 "," 分割 更新 nameServer 地址 ,更新 RemotingClient nameServer 地址
+     * @param addrs
+     */
     public void updateNameServerAddressList(final String addrs) {
+        //将NameServer 地址以 "," 分割
         String[] addrArray = addrs.split(";");
         List<String> list = Arrays.asList(addrArray);
         this.remotingClient.updateNameServerAddressList(list);
     }
 
+    /**
+     * 启动 RemotingClient
+     */
     public void start() {
         this.remotingClient.start();
     }
+
+    /**
+     * 关闭 RemotingClient
+     */
 
     public void shutdown() {
         this.remotingClient.shutdown();
@@ -561,8 +601,11 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
     ) throws RemotingException, MQBrokerException, InterruptedException {
         long beginStartTime = System.currentTimeMillis();
         RemotingCommand request = null;
+        //获取消息的类型
         String msgType = msg.getProperty(MessageConst.PROPERTY_MESSAGE_TYPE);
         boolean isReply = msgType != null && msgType.equals(MixAll.REPLY_MESSAGE_FLAG);
+        //sendSmartMsg 使用短变量名加快FastJson反序列化过程。
+
         if (isReply) {
             if (sendSmartMsg) {
                 SendMessageRequestHeaderV2 requestHeaderV2 = SendMessageRequestHeaderV2.createSendMessageRequestHeaderV2(requestHeader);
@@ -578,13 +621,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 request = RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE, requestHeader);
             }
         }
+        //设置请求内容
         request.setBody(msg.getBody());
 
         switch (communicationMode) {
             case ONEWAY:
+                //单向请求直接调用remotingClient
                 this.remotingClient.invokeOneway(addr, request, timeoutMillis);
                 return null;
             case ASYNC:
+                //重试计数
                 final AtomicInteger times = new AtomicInteger();
                 long costTimeAsync = System.currentTimeMillis() - beginStartTime;
                 if (timeoutMillis < costTimeAsync) {
@@ -607,6 +653,18 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return null;
     }
 
+    /**
+     * 同步调用 处理响应结果
+     * @param addr
+     * @param brokerName
+     * @param msg
+     * @param timeoutMillis
+     * @param request
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     private SendResult sendMessageSync(
         final String addr,
         final String brokerName,
@@ -619,6 +677,10 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return this.processSendResponse(brokerName, msg, response, addr);
     }
 
+    /**
+     * 执行 Rpc 请求 后置 钩子
+     * @param responseFuture
+     */
     void execRpcHooksAfterRequest(ResponseFuture responseFuture) {
         if (this.remotingClient instanceof NettyRemotingClient) {
             NettyRemotingClient remotingClient = (NettyRemotingClient) this.remotingClient;
@@ -643,14 +705,17 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
     ) {
         final long beginStartTime = System.currentTimeMillis();
         try {
+
             this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
                 @Override
                 public void operationComplete(ResponseFuture responseFuture) {
                     long cost = System.currentTimeMillis() - beginStartTime;
                     RemotingCommand response = responseFuture.getResponseCommand();
+                    //如果没有回调 并且 有响应结果
                     if (null == sendCallback && response != null) {
 
                         try {
+                            //处理响应结果 执行发送消息后 钩子
                             SendResult sendResult = MQClientAPIImpl.this.processSendResponse(brokerName, msg, response, addr);
                             if (context != null && sendResult != null) {
                                 context.setSendResult(sendResult);
@@ -658,43 +723,49 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                             }
                         } catch (Throwable e) {
                         }
-
+                        //更新该broker是否需要进行隔离 isolation 为 true 则至少 隔离 3分钟 否则取决 于发送消息的花费时间 currentLatency
                         producer.updateFaultItem(brokerName, System.currentTimeMillis() - responseFuture.getBeginTimestamp(), false);
                         return;
                     }
-
+                    //如果响应不为空 并且有回调
                     if (response != null) {
                         try {
+                            //处理响应结果 执行发送消息后 钩子
                             SendResult sendResult = MQClientAPIImpl.this.processSendResponse(brokerName, msg, response, addr);
                             assert sendResult != null;
                             if (context != null) {
                                 context.setSendResult(sendResult);
                                 context.getProducer().executeSendMessageHookAfter(context);
                             }
-
+                            //执行消息发送成功 回调
                             try {
                                 sendCallback.onSuccess(sendResult);
                             } catch (Throwable e) {
+                                //FIXME::这边出现异常直接不进行处理
                             }
-
+                            //更新该broker是否需要进行隔离 isolation 为 true 则至少 隔离 3分钟 否则取决 于发送消息的花费时间 currentLatency
                             producer.updateFaultItem(brokerName, System.currentTimeMillis() - responseFuture.getBeginTimestamp(), false);
                         } catch (Exception e) {
+                            //更新该broker是否需要进行隔离 isolation 为 true 则至少 隔离 3分钟 否则取决 于发送消息的花费时间 currentLatency
                             producer.updateFaultItem(brokerName, System.currentTimeMillis() - responseFuture.getBeginTimestamp(), true);
                             onExceptionImpl(brokerName, msg, timeoutMillis - cost, request, sendCallback, topicPublishInfo, instance,
                                 retryTimesWhenSendFailed, times, e, context, false, producer);
                         }
                     } else {
+                        //FIXME::没有响应结果 为什么要进行 隔离
                         producer.updateFaultItem(brokerName, System.currentTimeMillis() - responseFuture.getBeginTimestamp(), true);
                         if (!responseFuture.isSendRequestOK()) {
                             MQClientException ex = new MQClientException("send request failed", responseFuture.getCause());
                             onExceptionImpl(brokerName, msg, timeoutMillis - cost, request, sendCallback, topicPublishInfo, instance,
                                 retryTimesWhenSendFailed, times, ex, context, true, producer);
                         } else if (responseFuture.isTimeout()) {
+                            //等待时间超时
                             MQClientException ex = new MQClientException("wait response timeout " + responseFuture.getTimeoutMillis() + "ms",
                                 responseFuture.getCause());
                             onExceptionImpl(brokerName, msg, timeoutMillis - cost, request, sendCallback, topicPublishInfo, instance,
                                 retryTimesWhenSendFailed, times, ex, context, true, producer);
                         } else {
+                            //未知原因
                             MQClientException ex = new MQClientException("unknow reseaon", responseFuture.getCause());
                             onExceptionImpl(brokerName, msg, timeoutMillis - cost, request, sendCallback, topicPublishInfo, instance,
                                 retryTimesWhenSendFailed, times, ex, context, true, producer);
@@ -704,6 +775,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
             });
         } catch (Exception ex) {
             long cost = System.currentTimeMillis() - beginStartTime;
+            //发送异常 计算发送异步消息花费的时间 更新该broker是否需要进行隔离 isolation 为 true 则至少 隔离 3分钟 否则取决 于发送消息的花费时间 currentLatency
             producer.updateFaultItem(brokerName, cost, true);
             onExceptionImpl(brokerName, msg, timeoutMillis - cost, request, sendCallback, topicPublishInfo, instance,
                 retryTimesWhenSendFailed, times, ex, context, true, producer);
@@ -725,6 +797,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         final DefaultMQProducerImpl producer
     ) {
         int tmp = curTimes.incrementAndGet();
+        //如果需要重试 并且没有超过重试次数 再次重试 FIXME:: 这边是异步重试  还有 外面的重试 到底重试几次
         if (needRetry && tmp <= timesTotal) {
             String retryBrokerName = brokerName;//by default, it will send to the same broker
             if (topicPublishInfo != null) { //select one message queue accordingly, in order to determine which broker to send
@@ -738,12 +811,12 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
             sendMessageAsync(addr, retryBrokerName, msg, timeoutMillis, request, sendCallback, topicPublishInfo, instance,
                 timesTotal, curTimes, context, producer);
         } else {
-
+            //不需要重试 则设置 context 异常信息 执行发送消息 回调钩子
             if (context != null) {
                 context.setException(e);
                 context.getProducer().executeSendMessageHookAfter(context);
             }
-
+            //发送消息发 发声异常
             try {
                 sendCallback.onException(e);
             } catch (Exception ignored) {
@@ -751,6 +824,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         }
     }
 
+    /**
+     * 处理响应结果
+     * @param brokerName
+     * @param msg
+     * @param response
+     * @param addr
+     * @return
+     * @throws MQBrokerException
+     * @throws RemotingCommandException
+     */
     protected SendResult processSendResponse(
         final String brokerName,
         final Message msg,
@@ -758,6 +841,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         final String addr
     ) throws MQBrokerException, RemotingCommandException {
         SendStatus sendStatus;
+        //根据响应结果设置响应状态
         switch (response.getCode()) {
             case ResponseCode.FLUSH_DISK_TIMEOUT: {
                 sendStatus = SendStatus.FLUSH_DISK_TIMEOUT;
@@ -779,18 +863,19 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
             }
         }
-
+        //解码 Header 信息
         SendMessageResponseHeader responseHeader =
             (SendMessageResponseHeader) response.decodeCommandCustomHeader(SendMessageResponseHeader.class);
 
         //If namespace not null , reset Topic without namespace.
+        //如果配置namespace 将 topic去掉对应的namespace
         String topic = msg.getTopic();
         if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
             topic = NamespaceUtil.withoutNamespace(topic, this.clientConfig.getNamespace());
         }
 
         MessageQueue messageQueue = new MessageQueue(topic, brokerName, responseHeader.getQueueId());
-
+        //获取唯一 msgid
         String uniqMsgId = MessageClientIDSetter.getUniqID(msg);
         if (msg instanceof MessageBatch && responseHeader.getBatchUniqId() == null) {
             // This means it is not an inner batch
@@ -804,6 +889,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
             uniqMsgId,
             responseHeader.getMsgId(), messageQueue, responseHeader.getQueueOffset());
         sendResult.setTransactionId(responseHeader.getTransactionId());
+        //获取 regionId 和 traceOn
         String regionId = response.getExtFields().get(MessageConst.PROPERTY_MSG_REGION);
         String traceOn = response.getExtFields().get(MessageConst.PROPERTY_TRACE_SWITCH);
         if (regionId == null || regionId.isEmpty()) {
@@ -833,10 +919,12 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         }
 
         switch (communicationMode) {
+            //获取消息不支持单向
             case ONEWAY:
                 assert false;
                 return null;
             case ASYNC:
+                //异步获取消息
                 this.pullMessageAsync(addr, request, timeoutMillis, pullCallback);
                 return null;
             case SYNC:
@@ -881,6 +969,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         });
     }
 
+    /**
+     * 异步消息确认 执行 Rpc请求 后置 钩子 ,执行回调
+     * @param addr
+     * @param timeOut
+     * @param ackCallback
+     * @param requestHeader
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public void ackMessageAsync(
         final String addr,
         final long timeOut,
@@ -896,17 +994,21 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 if (response != null) {
                     try {
                         AckResult ackResult = new AckResult();
+                        //设置响应状态
                         if (ResponseCode.SUCCESS == response.getCode()) {
                             ackResult.setStatus(AckStatus.OK);
                         } else {
                             ackResult.setStatus(AckStatus.NO_EXIST);
                         }
                         assert ackResult != null;
+                        //成功回调
                         ackCallback.onSuccess(ackResult);
                     } catch (Exception e) {
+                        //异常回调
                         ackCallback.onException(e);
                     }
                 } else {
+                    //异常回调
                     if (!responseFuture.isSendRequestOK()) {
                         ackCallback.onException(new MQClientException(ClientErrorCode.CONNECT_BROKER_EXCEPTION, "send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
                     } else if (responseFuture.isTimeout()) {
@@ -929,12 +1031,14 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         final AckCallback ackCallback
     ) throws RemotingException, MQBrokerException, InterruptedException {
         final RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.CHANGE_MESSAGE_INVISIBLETIME, requestHeader);
+        //异步调用更改消息可见的时间
         this.remotingClient.invokeAsync(addr, request, timeoutMillis, new BaseInvokeCallback(MQClientAPIImpl.this) {
             @Override
             public void onComplete(ResponseFuture responseFuture) {
                 RemotingCommand response = responseFuture.getResponseCommand();
                 if (response != null) {
                     try {
+                        //解码响应结果
                         ChangeInvisibleTimeResponseHeader responseHeader = (ChangeInvisibleTimeResponseHeader) response.decodeCommandCustomHeader(ChangeInvisibleTimeResponseHeader.class);
                         AckResult ackResult = new AckResult();
                         if (ResponseCode.SUCCESS == response.getCode()) {
@@ -945,6 +1049,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                                     responseHeader.getReviveQid(), requestHeader.getTopic(), brokerName, requestHeader.getQueueId()) + MessageConst.KEY_SEPARATOR
                                 + requestHeader.getOffset());
                         } else {
+                            //
                             ackResult.setStatus(AckStatus.NO_EXIST);
                         }
                         assert ackResult != null;
@@ -953,6 +1058,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                         ackCallback.onException(e);
                     }
                 } else {
+                    //异常回调
                     if (!responseFuture.isSendRequestOK()) {
                         ackCallback.onException(new MQClientException(ClientErrorCode.CONNECT_BROKER_EXCEPTION, "send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
                     } else if (responseFuture.isTimeout()) {
@@ -972,12 +1078,14 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         final long timeoutMillis,
         final PullCallback pullCallback
     ) throws RemotingException, InterruptedException {
+        //异步获取消息
         this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
             @Override
             public void operationComplete(ResponseFuture responseFuture) {
                 RemotingCommand response = responseFuture.getResponseCommand();
                 if (response != null) {
                     try {
+                        //收到好获取的消息 进行回调处理
                         PullResult pullResult = MQClientAPIImpl.this.processPullResponse(response, addr);
                         assert pullResult != null;
                         pullCallback.onSuccess(pullResult);
@@ -985,6 +1093,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                         pullCallback.onException(e);
                     }
                 } else {
+                    //执行异常回调
                     if (!responseFuture.isSendRequestOK()) {
                         pullCallback.onException(new MQClientException(ClientErrorCode.CONNECT_BROKER_EXCEPTION, "send request failed to " + addr + ". Request: " + request, responseFuture.getCause()));
                     } else if (responseFuture.isTimeout()) {
@@ -998,6 +1107,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         });
     }
 
+    /**
+     * 同步获取消息
+     * @param addr
+     * @param request
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws InterruptedException
+     * @throws MQBrokerException
+     */
     private PullResult pullMessageSync(
         final String addr,
         final RemotingCommand request,
@@ -1008,20 +1127,32 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return this.processPullResponse(response, addr);
     }
 
+    /**
+     * 处理 pull 消息结果
+     * @param response
+     * @param addr
+     * @return
+     * @throws MQBrokerException
+     * @throws RemotingCommandException
+     */
     private PullResult processPullResponse(
         final RemotingCommand response,
         final String addr) throws MQBrokerException, RemotingCommandException {
         PullStatus pullStatus = PullStatus.NO_NEW_MSG;
         switch (response.getCode()) {
+            //如果过成功 那就找到消息
             case ResponseCode.SUCCESS:
                 pullStatus = PullStatus.FOUND;
                 break;
+                //如果拉取没有找到 那就 没有新消息
             case ResponseCode.PULL_NOT_FOUND:
                 pullStatus = PullStatus.NO_NEW_MSG;
                 break;
+                //如果是立即重试 那就消息 匹配
             case ResponseCode.PULL_RETRY_IMMEDIATELY:
                 pullStatus = PullStatus.NO_MATCHED_MSG;
                 break;
+                //如果是 获取的偏移量已经 移动 那就偏移量 非法
             case ResponseCode.PULL_OFFSET_MOVED:
                 pullStatus = PullStatus.OFFSET_ILLEGAL;
                 break;
@@ -1029,7 +1160,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
             default:
                 throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
         }
-
+        //进行解析
         PullMessageResponseHeader responseHeader =
             (PullMessageResponseHeader) response.decodeCommandCustomHeader(PullMessageResponseHeader.class);
 
@@ -1045,6 +1176,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
             case ResponseCode.SUCCESS:
                 popStatus = PopStatus.FOUND;
                 ByteBuffer byteBuffer = ByteBuffer.wrap(response.getBody());
+                //对消息就进行解码
                 msgFoundList = MessageDecoder.decodesBatch(
                     byteBuffer,
                     clientConfig.isDecodeReadBody(),
@@ -1079,6 +1211,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 msgOffsetInfo = ExtraInfoUtil.parseMsgOffsetInfo(responseHeader.getMsgOffsetInfo());
                 orderCountInfo = ExtraInfoUtil.parseOrderCountInfo(responseHeader.getOrderCountInfo());
             }
+            //key 为 topicMark@queueId, value 为 消息的偏移量 然后 按 key 进行排序 正常的topic 排在前面
             Map<String/*topicMark@queueId*/, List<Long>/*msg queueOffset*/> sortMap = new HashMap<String, List<Long>>(16);
             for (MessageExt messageExt : msgFoundList) {
                 String key = ExtraInfoUtil.getStartOffsetInfoMapKey(messageExt.getTopic(), messageExt.getQueueId());
@@ -1087,12 +1220,14 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 }
                 sortMap.get(key).add(messageExt.getQueueOffset());
             }
+            //key 为 "topicQueueId" value 为 额外信息
             Map<String, String> map = new HashMap<String, String>(5);
             for (MessageExt messageExt : msgFoundList) {
                 if (requestHeader instanceof PopMessageRequestHeader) {
                     if (startOffsetInfo == null) {
                         // we should set the check point info to extraInfo field , if the command is popMsg
                         // find pop ck offset
+                        // key 为 "topicQueueId" value 为 额外信息 为消息添加 POP_CK 属性 FIXME:: 挺奇怪的 这边 map 的 额外信息 每个 队列只 设置 一次
                         String key = messageExt.getTopic() + messageExt.getQueueId();
                         if (!map.containsKey(messageExt.getTopic() + messageExt.getQueueId())) {
                             map.put(key, ExtraInfoUtil.buildExtraInfo(messageExt.getQueueOffset(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(), responseHeader.getReviveQid(),
@@ -1101,17 +1236,20 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                         }
                         messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK, map.get(key) + MessageConst.KEY_SEPARATOR + messageExt.getQueueOffset());
                     } else {
+                        //key 为 topicMark@queueId
                         String key = ExtraInfoUtil.getStartOffsetInfoMapKey(messageExt.getTopic(), messageExt.getQueueId());
+                        //根据 index 获取 msgQueueOffset FIXME::?? msgQueueOffset 和 queueOffset 有什么区别
                         int index = sortMap.get(key).indexOf(messageExt.getQueueOffset());
                         Long msgQueueOffset = msgOffsetInfo.get(key).get(index);
                         if (msgQueueOffset != messageExt.getQueueOffset()) {
                             log.warn("Queue offset[%d] of msg is strange, not equal to the stored in msg, %s", msgQueueOffset, messageExt);
                         }
-
+                        // 为消息添加 POP_CK 属性
                         messageExt.getProperties().put(MessageConst.PROPERTY_POP_CK,
                             ExtraInfoUtil.buildExtraInfo(startOffsetInfo.get(key).longValue(), responseHeader.getPopTime(), responseHeader.getInvisibleTime(),
                                 responseHeader.getReviveQid(), messageExt.getTopic(), brokerName, messageExt.getQueueId(), msgQueueOffset.longValue())
                         );
+                        //若是顺序消息 设置重试次数
                         if (((PopMessageRequestHeader) requestHeader).isOrder() && orderCountInfo != null) {
                             Integer count = orderCountInfo.get(key);
                             if (count != null && count > 0) {
@@ -1119,10 +1257,12 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                             }
                         }
                     }
+                    //为消息 设置 第一次 POP_TIME
                     if (messageExt.getProperties().get(MessageConst.PROPERTY_FIRST_POP_TIME) == null) {
                         messageExt.getProperties().put(MessageConst.PROPERTY_FIRST_POP_TIME, String.valueOf(responseHeader.getPopTime()));
                     }
                 }
+                //为消息设置 brokerName topic
                 messageExt.setBrokerName(brokerName);
                 messageExt.setTopic(NamespaceUtil.withoutNamespace(topic, this.clientConfig.getNamespace()));
             }
@@ -1130,6 +1270,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return popResult;
     }
 
+    /**
+     * 根据偏移获取消息
+     * @param addr
+     * @param phyoffset
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public MessageExt viewMessage(final String addr, final long phyoffset, final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
         ViewMessageRequestHeader requestHeader = new ViewMessageRequestHeader();
@@ -1182,6 +1332,17 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 查询 指定时间 消费队列的偏移量
+     * @param addr
+     * @param messageQueue
+     * @param timestamp
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public long searchOffset(final String addr, final MessageQueue messageQueue, final long timestamp,
         final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
@@ -1208,6 +1369,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 查询给定消息队列的最大偏移量
+     * @param addr
+     * @param messageQueue
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public long getMaxOffset(final String addr, final MessageQueue messageQueue, final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
         GetMaxOffsetRequestHeader requestHeader = new GetMaxOffsetRequestHeader();
@@ -1233,6 +1404,18 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 获取该消费组的 消费者列表
+     * @param addr
+     * @param consumerGroup
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingConnectException
+     * @throws RemotingSendRequestException
+     * @throws RemotingTimeoutException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public List<String> getConsumerIdListByGroup(
         final String addr,
         final String consumerGroup,
@@ -1241,7 +1424,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         GetConsumerListByGroupRequestHeader requestHeader = new GetConsumerListByGroupRequestHeader();
         requestHeader.setConsumerGroup(consumerGroup);
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_CONSUMER_LIST_BY_GROUP, requestHeader);
-
+        //获取该消费组的 消费者列表
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
             request, timeoutMillis);
         assert response != null;
@@ -1260,6 +1443,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 查询给定消息队列的最小偏移量
+     * @param addr
+     * @param messageQueue
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public long getMinOffset(final String addr, final MessageQueue messageQueue, final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
         GetMinOffsetRequestHeader requestHeader = new GetMinOffsetRequestHeader();
@@ -1285,6 +1478,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 获取MessageQueue 消息最早 存储时间
+     * @param addr
+     * @param mq
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public long getEarliestMsgStoretime(final String addr, final MessageQueue mq, final long timeoutMillis)
         throws RemotingException, MQBrokerException, InterruptedException {
         GetEarliestMsgStoretimeRequestHeader requestHeader = new GetEarliestMsgStoretimeRequestHeader();
@@ -1310,6 +1513,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 查询消费者 消息队列的偏移量
+     * @param addr
+     * @param requestHeader
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public long queryConsumerOffset(
         final String addr,
         final QueryConsumerOffsetRequestHeader requestHeader,
@@ -1336,6 +1549,15 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 同步更新消费者的偏移量
+     * @param addr
+     * @param requestHeader
+     * @param timeoutMillis
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public void updateConsumerOffset(
         final String addr,
         final UpdateConsumerOffsetRequestHeader requestHeader,
@@ -1357,6 +1579,17 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 单向更新消费者的偏移量
+     * @param addr
+     * @param requestHeader
+     * @param timeoutMillis
+     * @throws RemotingConnectException
+     * @throws RemotingTooMuchRequestException
+     * @throws RemotingTimeoutException
+     * @throws RemotingSendRequestException
+     * @throws InterruptedException
+     */
     public void updateConsumerOffsetOneway(
         final String addr,
         final UpdateConsumerOffsetRequestHeader requestHeader,
@@ -1368,6 +1601,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         this.remotingClient.invokeOneway(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr), request, timeoutMillis);
     }
 
+    /**
+     * 发送心跳数据 获取对应的版本
+     * @param addr
+     * @param heartbeatData
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public int sendHeartbeat(
         final String addr,
         final HeartbeatData heartbeatData,
@@ -1389,6 +1632,17 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 取消注册客户端
+     * @param addr
+     * @param clientID
+     * @param producerGroup
+     * @param consumerGroup
+     * @param timeoutMillis
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public void unregisterClient(
         final String addr,
         final String clientID,
@@ -1415,6 +1669,15 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 单向结束事务
+     * @param addr
+     * @param requestHeader
+     * @param remark
+     * @param timeoutMillis
+     * @throws RemotingException
+     * @throws InterruptedException
+     */
     public void endTransactionOneway(
         final String addr,
         final EndTransactionRequestHeader requestHeader,
@@ -1440,6 +1703,15 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
             invokeCallback);
     }
 
+    /**
+     * 注册客户端 是发送 HEART_BEAT 在发送心跳时候就进行注册
+     * @param addr
+     * @param heartbeat
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws InterruptedException
+     */
     public boolean registerClient(final String addr, final HeartbeatData heartbeat, final long timeoutMillis)
         throws RemotingException, InterruptedException {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.HEART_BEAT, null);
@@ -1449,6 +1721,18 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return response.getCode() == ResponseCode.SUCCESS;
     }
 
+    /**
+     * 消费者回发消息
+     * @param addr
+     * @param msg
+     * @param consumerGroup
+     * @param delayLevel
+     * @param timeoutMillis
+     * @param maxConsumeRetryTimes
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public void consumerSendMessageBack(
         final String addr,
         final MessageExt msg,
@@ -1481,12 +1765,22 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 将 MessageQueue 批量上锁 返回成功 上锁的 MessageQueue
+     * @param addr
+     * @param requestBody
+     * @param timeoutMillis
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public Set<MessageQueue> lockBatchMQ(
         final String addr,
         final LockBatchRequestBody requestBody,
         final long timeoutMillis) throws RemotingException, MQBrokerException, InterruptedException {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.LOCK_BATCH_MQ, null);
-
+        // 将 MessageQueue 批量上锁 返回成功 上锁的 MessageQueue
         request.setBody(requestBody.encode());
         RemotingCommand response = this.remotingClient.invokeSync(MixAll.brokerVIPChannel(this.clientConfig.isVipChannelEnabled(), addr),
             request, timeoutMillis);
@@ -1503,6 +1797,16 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 将 MessageQueue 批量解锁
+     * @param addr
+     * @param requestBody
+     * @param timeoutMillis
+     * @param oneway
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public void unlockBatchMQ(
         final String addr,
         final UnlockBatchRequestBody requestBody,
@@ -1764,18 +2068,34 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
 
         throw new MQBrokerException(response.getCode(), response.getRemark());
     }
-
+    /**
+     * 从NameServer 获取 TopicRouteInfo
+     */
     public TopicRouteData getDefaultTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis)
         throws RemotingException, MQClientException, InterruptedException {
 
         return getTopicRouteInfoFromNameServer(topic, timeoutMillis, false);
     }
-
+    /**
+     * 从NameServer 获取 TopicRouteInfo
+     */
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis)
         throws RemotingException, MQClientException, InterruptedException {
         return getTopicRouteInfoFromNameServer(topic, timeoutMillis, true);
     }
 
+    /**
+     * 从NameServer 获取 TopicRouteInfo
+     * @param topic
+     * @param timeoutMillis
+     * @param allowTopicNotExist
+     * @return
+     * @throws MQClientException
+     * @throws InterruptedException
+     * @throws RemotingTimeoutException
+     * @throws RemotingSendRequestException
+     * @throws RemotingConnectException
+     */
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis,
         boolean allowTopicNotExist) throws MQClientException, InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException {
         GetRouteInfoRequestHeader requestHeader = new GetRouteInfoRequestHeader();
@@ -2220,6 +2540,21 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         throw new MQClientException(response.getCode(), response.getRemark());
     }
 
+    /**
+     * 注册 消息过滤 class
+     * @param addr
+     * @param consumerGroup
+     * @param topic
+     * @param className
+     * @param classCRC
+     * @param classBody
+     * @param timeoutMillis
+     * @throws RemotingConnectException
+     * @throws RemotingSendRequestException
+     * @throws RemotingTimeoutException
+     * @throws InterruptedException
+     * @throws MQBrokerException
+     */
     public void registerMessageFilterClass(final String addr,
         final String consumerGroup,
         final String topic,

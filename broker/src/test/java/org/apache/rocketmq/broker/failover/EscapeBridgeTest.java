@@ -20,6 +20,7 @@ package org.apache.rocketmq.broker.failover;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import org.apache.rocketmq.broker.BrokerController;
+import org.apache.rocketmq.broker.filter.failover.EscapeBridge;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.common.BrokerConfig;
 import org.apache.rocketmq.common.message.MessageExtBrokerInner;

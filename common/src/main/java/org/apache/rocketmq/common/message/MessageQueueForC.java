@@ -22,9 +22,21 @@ import java.io.Serializable;
 public class MessageQueueForC implements Comparable<MessageQueueForC>, Serializable {
 
     private static final long serialVersionUID = 5320967846569962104L;
+    /**
+     * topic
+     */
     private String topic;
+    /**
+     * brker 名称
+     */
     private String brokerName;
+    /**
+     * queue Id
+     */
     private int queueId;
+    /**
+     * 偏移量
+     */
     private long offset;
 
     public MessageQueueForC(String topic, String brokerName, int queueId, long offset) {

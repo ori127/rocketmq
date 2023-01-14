@@ -25,8 +25,18 @@ import java.util.Set;
 import org.apache.rocketmq.common.protocol.route.BrokerData;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+/**
+ * 集群信息
+ */
 public class ClusterInfo extends RemotingSerializable {
+
+    /**
+     * key 为  brokerName ,value 为 BrokerData
+     */
     private Map<String/* brokerName */, BrokerData> brokerAddrTable;
+    /**
+     * key 为 clusterName,value 为 brokerName 集合
+     */
     private Map<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
 
     public Map<String, BrokerData> getBrokerAddrTable() {

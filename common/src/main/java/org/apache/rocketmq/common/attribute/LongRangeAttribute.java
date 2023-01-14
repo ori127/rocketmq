@@ -18,9 +18,21 @@ package org.apache.rocketmq.common.attribute;
 
 import static java.lang.String.format;
 
+/**
+ * Long 属性
+ */
 public class LongRangeAttribute extends Attribute {
+    /**
+     * 最小值
+     */
     private final long min;
+    /**
+     * 最大值
+     */
     private final long max;
+    /**
+     * 默认值
+     */
     private final long defaultValue;
 
     public LongRangeAttribute(String name, boolean changeable, long min, long max, long defaultValue) {

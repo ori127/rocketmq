@@ -22,9 +22,15 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.rocketmq.common.MixAll;
 
+/**
+ * 批量消息
+ */
 public class MessageBatch extends Message implements Iterable<Message> {
 
     private static final long serialVersionUID = 621335151046335557L;
+    /**
+     * 消息集合
+     */
     private final List<Message> messages;
 
     private MessageBatch(List<Message> messages) {
@@ -39,12 +45,19 @@ public class MessageBatch extends Message implements Iterable<Message> {
         return messages.iterator();
     }
 
+    /**
+     * 将消息集合转换成 MessageBatch 对象
+     * @param messages
+     * @return
+     */
     public static MessageBatch generateFromList(Collection<? extends Message> messages) {
         assert messages != null;
         assert messages.size() > 0;
         List<Message> messageList = new ArrayList<Message>(messages.size());
         Message first = null;
         for (Message message : messages) {
+            //批处理不支持定时消息
+            //批处理不支持重试
             if (message.getDelayTimeLevel() > 0) {
                 throw new UnsupportedOperationException("TimeDelayLevel is not supported for batching");
             }
@@ -54,9 +67,11 @@ public class MessageBatch extends Message implements Iterable<Message> {
             if (first == null) {
                 first = message;
             } else {
+                //所有的消息必须是同一个topic
                 if (!first.getTopic().equals(message.getTopic())) {
                     throw new UnsupportedOperationException("The topic of the messages in one batch should be the same");
                 }
+                //所有消息的waitStoreMsgOK 必须相同
                 if (first.isWaitStoreMsgOK() != message.isWaitStoreMsgOK()) {
                     throw new UnsupportedOperationException("The waitStoreMsgOK of the messages in one batch should the same");
                 }

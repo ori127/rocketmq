@@ -20,14 +20,23 @@ import org.apache.rocketmq.store.logfile.MappedFile;
 
 import java.nio.ByteBuffer;
 
+/**
+ * 选择映射的缓存区结果
+ */
 public class SelectMappedBufferResult {
-
+    /**
+     * 开始的偏移量 物理偏移量
+     */
     private final long startOffset;
 
     private final ByteBuffer byteBuffer;
-
+    /**
+     * 缓冲大小
+     */
     private int size;
-
+    /**
+     * 映射的文件
+     */
     protected MappedFile mappedFile;
 
     public SelectMappedBufferResult(long startOffset, ByteBuffer byteBuffer, int size, MappedFile mappedFile) {

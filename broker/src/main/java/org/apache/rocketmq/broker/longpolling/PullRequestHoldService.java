@@ -33,8 +33,16 @@ import org.apache.rocketmq.store.ConsumeQueueExt;
 public class PullRequestHoldService extends ServiceThread {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     protected static final String TOPIC_QUEUEID_SEPARATOR = "@";
+
+
     protected final BrokerController brokerController;
+    /**
+     * 系统时间
+     */
     private final SystemClock systemClock = new SystemClock();
+    /**
+     * key 为  topic@queueId , value 为 获取该 topic 的请求, topic  =>  ManyPullRequest  的映射
+     */
     protected ConcurrentMap<String/* topic@queueId */, ManyPullRequest> pullRequestTable =
         new ConcurrentHashMap<String, ManyPullRequest>(1024);
 
@@ -44,6 +52,7 @@ public class PullRequestHoldService extends ServiceThread {
 
     public void suspendPullRequest(final String topic, final int queueId, final PullRequest pullRequest) {
         String key = this.buildKey(topic, queueId);
+        //根据 topic 获取 ManyPullRequest 不存在 则 创建 将 pullRequest 添加 ManyPullRequest
         ManyPullRequest mpr = this.pullRequestTable.get(key);
         if (null == mpr) {
             mpr = new ManyPullRequest();
@@ -56,6 +65,12 @@ public class PullRequestHoldService extends ServiceThread {
         mpr.addPullRequest(pullRequest);
     }
 
+    /**
+     * 构建key topic@queueId
+     * @param topic
+     * @param queueId
+     * @return
+     */
     private String buildKey(final String topic, final int queueId) {
         StringBuilder sb = new StringBuilder(topic.length() + 5);
         sb.append(topic);
@@ -69,6 +84,7 @@ public class PullRequestHoldService extends ServiceThread {
         log.info("{} service started", this.getServiceName());
         while (!this.isStopped()) {
             try {
+                //长轮训 等待 5 秒 否则等 1秒
                 if (this.brokerController.getBrokerConfig().isLongPollingEnable()) {
                     this.waitForRunning(5 * 1000);
                 } else {
@@ -77,6 +93,7 @@ public class PullRequestHoldService extends ServiceThread {
 
                 long beginLockTimestamp = this.systemClock.now();
                 this.checkHoldRequest();
+                //checkHold花费时间超过5秒
                 long costTime = this.systemClock.now() - beginLockTimestamp;
                 if (costTime > 5 * 1000) {
                     log.warn("PullRequestHoldService: check hold pull request cost {}ms", costTime);
@@ -99,10 +116,12 @@ public class PullRequestHoldService extends ServiceThread {
 
     protected void checkHoldRequest() {
         for (String key : this.pullRequestTable.keySet()) {
+            //遍历 pullRequestTable topic@queueId 进行 "@" 分割
             String[] kArray = key.split(TOPIC_QUEUEID_SEPARATOR);
             if (2 == kArray.length) {
                 String topic = kArray[0];
                 int queueId = Integer.parseInt(kArray[1]);
+                //获取 该 topic 该 队列 最大偏移量 进行通知消息到达
                 final long offset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
                 try {
                     this.notifyMessageArriving(topic, queueId, offset);
@@ -121,27 +140,31 @@ public class PullRequestHoldService extends ServiceThread {
 
     public void notifyMessageArriving(final String topic, final int queueId, final long maxOffset, final Long tagsCode,
         long msgStoreTime, byte[] filterBitMap, Map<String, String> properties) {
+        // 构建key topic@queueId 获取 该 topic 该消息队列的 ManyPullRequest
         String key = this.buildKey(topic, queueId);
         ManyPullRequest mpr = this.pullRequestTable.get(key);
         if (mpr != null) {
+            //ManyPullRequest clone 成 requestList 并且 清空
             List<PullRequest> requestList = mpr.cloneListAndClear();
             if (requestList != null) {
                 List<PullRequest> replayList = new ArrayList<PullRequest>();
 
                 for (PullRequest request : requestList) {
                     long newestOffset = maxOffset;
+                    //如果新的偏移量 仍然小于该请求的 要求偏移量 则 重新获取 该 topic 消息队列的 偏移量
                     if (newestOffset <= request.getPullFromThisOffset()) {
                         newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
                     }
-
+                    //如果新的偏移量 大于 该请求的 要求偏移量
                     if (newestOffset > request.getPullFromThisOffset()) {
+                        //FIXME:: 进行匹配
                         boolean match = request.getMessageFilter().isMatchedByConsumeQueue(tagsCode,
                             new ConsumeQueueExt.CqExtUnit(tagsCode, msgStoreTime, filterBitMap));
                         // match by bit map, need eval again when properties is not null.
                         if (match && properties != null) {
                             match = request.getMessageFilter().isMatchedByCommitLog(null, properties);
                         }
-
+                        //如果有匹配的消息 执行获取消息请求
                         if (match) {
                             try {
                                 this.brokerController.getPullMessageProcessor().executeRequestWhenWakeup(request.getClientChannel(),
@@ -154,7 +177,7 @@ public class PullRequestHoldService extends ServiceThread {
                             continue;
                         }
                     }
-
+                    //超过暂停时间 执行获取消息请求
                     if (System.currentTimeMillis() >= (request.getSuspendTimestamp() + request.getTimeoutMillis())) {
                         try {
                             this.brokerController.getPullMessageProcessor().executeRequestWhenWakeup(request.getClientChannel(),
@@ -166,7 +189,7 @@ public class PullRequestHoldService extends ServiceThread {
                         }
                         continue;
                     }
-
+                    //没有达到该要求的偏移量 或者 没有暂停 超时 重新添加 该 topic 的 ManyPullRequest
                     replayList.add(request);
                 }
 
@@ -178,6 +201,7 @@ public class PullRequestHoldService extends ServiceThread {
     }
 
     public void notifyMasterOnline() {
+        //遍历 pullRequestTable 清空 ManyPullRequest 执行获取消息请求
         for (ManyPullRequest mpr : this.pullRequestTable.values()) {
             if (mpr == null || mpr.isEmpty()) {
                 continue;

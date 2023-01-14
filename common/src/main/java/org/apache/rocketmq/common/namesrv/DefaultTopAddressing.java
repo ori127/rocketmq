@@ -36,6 +36,9 @@ public class DefaultTopAddressing implements TopAddressing {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
     private String nsAddr;
+    /**
+     * MixAll.getWSAddr()
+     */
     private String wsAddr;
     private String unitName;
     private Map<String, String> para;
@@ -59,6 +62,11 @@ public class DefaultTopAddressing implements TopAddressing {
         this.topAddressingList = loadCustomTopAddressing();
     }
 
+    /**
+     * 清除换行符号
+     * @param str
+     * @return
+     */
     private static String clearNewLine(final String str) {
         String newString = str.trim();
         int index = newString.indexOf("\r");
@@ -107,6 +115,12 @@ public class DefaultTopAddressing implements TopAddressing {
         }
     }
 
+    /**
+     * 从wsAddr获取 nameServer 地址
+     * @param verbose
+     * @param timeoutMills
+     * @return
+     */
     public final String fetchNSAddr(boolean verbose, long timeoutMills) {
         String url = this.wsAddr;
         try {
@@ -117,6 +131,7 @@ public class DefaultTopAddressing implements TopAddressing {
                 else {
                     url = url + "?";
                 }
+                //参数拼接
                 for (Map.Entry<String, String> entry : this.para.entrySet()) {
                     url += entry.getKey() + "=" + entry.getValue() + "&";
                 }

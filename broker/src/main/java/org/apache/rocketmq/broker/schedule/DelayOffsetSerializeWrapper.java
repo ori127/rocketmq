@@ -21,7 +21,13 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.common.DataVersion;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+/**
+ * 延迟偏移量
+ */
 public class DelayOffsetSerializeWrapper extends RemotingSerializable {
+    /**
+     * key 为延迟 等级 , value 为延迟等级对应的偏移量
+     */
     private ConcurrentMap<Integer /* level */, Long/* offset */> offsetTable =
         new ConcurrentHashMap<Integer, Long>(32);
 

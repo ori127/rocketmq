@@ -21,12 +21,33 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class IndexHeader {
+    /**
+     * index header 大小 总共40个字节
+     */
     public static final int INDEX_HEADER_SIZE = 40;
+    /**
+     * 开始时间 8个字节
+     */
     private static int beginTimestampIndex = 0;
+    /**
+     * 结束时间 8个字节
+     */
     private static int endTimestampIndex = 8;
+    /**
+     * 开始物理偏移量 8个字节
+     */
     private static int beginPhyoffsetIndex = 16;
+    /**
+     * 结束物理偏移量 8个字节
+     */
     private static int endPhyoffsetIndex = 24;
+    /**
+     * hashSlot的数量 4个字节
+     */
     private static int hashSlotcountIndex = 32;
+    /**
+     * index的数量 4个字节
+     */
     private static int indexCountIndex = 36;
     private final ByteBuffer byteBuffer;
     private final AtomicLong beginTimestamp = new AtomicLong(0);
@@ -34,6 +55,9 @@ public class IndexHeader {
     private final AtomicLong beginPhyOffset = new AtomicLong(0);
     private final AtomicLong endPhyOffset = new AtomicLong(0);
     private final AtomicInteger hashSlotCount = new AtomicInteger(0);
+    /**
+     * 文件当中 index的 数量
+     */
     private final AtomicInteger indexCount = new AtomicInteger(1);
 
     public IndexHeader(final ByteBuffer byteBuffer) {

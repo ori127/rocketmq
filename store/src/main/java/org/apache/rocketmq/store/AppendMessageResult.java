@@ -25,13 +25,28 @@ public class AppendMessageResult {
     // Return code
     private AppendMessageStatus status;
     // Where to start writing
+    /**
+     * 从什么位置开始写
+     */
     private long wroteOffset;
     // Write Bytes
+    /**
+     * 写入字节
+     */
     private int wroteBytes;
     // Message ID
+    /**
+     * 消息的ID
+     */
     private String msgId;
+    /**
+     * 消息id提供者
+     */
     private Supplier<String> msgIdSupplier;
     // Message storage timestamp
+    /**
+     * 消息存储时间
+     */
     private long storeTimestamp;
     // Consume queue's offset(step by one)
     private long logicsOffset;

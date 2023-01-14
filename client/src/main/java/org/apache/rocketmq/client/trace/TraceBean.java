@@ -22,15 +22,27 @@ import org.apache.rocketmq.common.message.MessageType;
 
 public class TraceBean {
     private static final String LOCAL_ADDRESS = UtilAll.ipToIPv4Str(UtilAll.getIP());
+    /**
+     * message 的 topic
+     */
     private String topic = "";
     private String msgId = "";
     private String offsetMsgId = "";
+    /**
+     * message 的 tags
+     */
     private String tags = "";
+    /**
+     * message 的 keys
+     */
     private String keys = "";
     private String storeHost = LOCAL_ADDRESS;
     private String clientHost = LOCAL_ADDRESS;
     private long storeTime;
     private int retryTimes;
+    /**
+     * message 的 body 的 大小
+     */
     private int bodyLength;
     private MessageType msgType;
     private LocalTransactionState transactionState;

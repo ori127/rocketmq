@@ -16,18 +16,35 @@
  */
 package org.apache.rocketmq.store;
 
+/**
+ * 运行标记
+ */
 public class RunningFlags {
 
+    /**
+     * 0 bit 不可读
+     */
     private static final int NOT_READABLE_BIT = 1;
-
+    /**
+     * 1 bit 不可写
+     */
     private static final int NOT_WRITEABLE_BIT = 1 << 1;
-
+    /**
+     * 2 bit 写逻辑队列错误
+     */
     private static final int WRITE_LOGICS_QUEUE_ERROR_BIT = 1 << 2;
-
+    /**
+     * 3 bit 写入索引文件错误
+     */
     private static final int WRITE_INDEX_FILE_ERROR_BIT = 1 << 3;
 
+    /**
+     * 4 bit 磁盘满
+     */
     private static final int DISK_FULL_BIT = 1 << 4;
-
+    /**
+     * 运行参数标记
+     */
     private volatile int flagBits = 0;
 
     public RunningFlags() {

@@ -19,6 +19,9 @@ package org.apache.rocketmq.common.message;
 
 import java.util.Map;
 
+/**
+ * 消息访问器用来获取或者设置消息当中属性值
+ */
 public class MessageAccessor {
 
     public static void clearProperty(final Message msg, final String name) {
@@ -49,10 +52,20 @@ public class MessageAccessor {
         return msg.getProperty(MessageConst.PROPERTY_CORRECTION_FLAG);
     }
 
+    /**
+     * 设置消息原始消息Id
+     * @param msg
+     * @param originMessageId
+     */
     public static void setOriginMessageId(final Message msg, String originMessageId) {
         putProperty(msg, MessageConst.PROPERTY_ORIGIN_MESSAGE_ID, originMessageId);
     }
 
+    /**
+     * 获取消息的原始消息id
+     * @param msg
+     * @return
+     */
     public static String getOriginMessageId(final Message msg) {
         return msg.getProperty(MessageConst.PROPERTY_ORIGIN_MESSAGE_ID);
     }
@@ -65,30 +78,65 @@ public class MessageAccessor {
         return msg.getProperty(MessageConst.PROPERTY_MQ2_FLAG);
     }
 
+    /**
+     * 设置消息重新消费的次数
+     * @param msg
+     * @param reconsumeTimes
+     */
     public static void setReconsumeTime(final Message msg, String reconsumeTimes) {
         putProperty(msg, MessageConst.PROPERTY_RECONSUME_TIME, reconsumeTimes);
     }
 
+    /**
+     * 获取消息重新消费的次数
+     * @param msg
+     * @return
+     */
     public static String getReconsumeTime(final Message msg) {
         return msg.getProperty(MessageConst.PROPERTY_RECONSUME_TIME);
     }
 
+    /**
+     * 设置消息最大重新消费次数
+     * @param msg
+     * @param maxReconsumeTimes
+     */
     public static void setMaxReconsumeTimes(final Message msg, String maxReconsumeTimes) {
         putProperty(msg, MessageConst.PROPERTY_MAX_RECONSUME_TIMES, maxReconsumeTimes);
     }
 
+    /**
+     * 获取消息最大重新消费次数
+     * @param msg
+     * @return
+     */
     public static String getMaxReconsumeTimes(final Message msg) {
         return msg.getProperty(MessageConst.PROPERTY_MAX_RECONSUME_TIMES);
     }
 
+    /**
+     * 消息属性的消费开始时间
+     * @param msg
+     * @param propertyConsumeStartTimeStamp
+     */
     public static void setConsumeStartTimeStamp(final Message msg, String propertyConsumeStartTimeStamp) {
         putProperty(msg, MessageConst.PROPERTY_CONSUME_START_TIMESTAMP, propertyConsumeStartTimeStamp);
     }
 
+    /**
+     * 消息的消费开始时间
+     * @param msg
+     * @return
+     */
     public static String getConsumeStartTimeStamp(final Message msg) {
         return msg.getProperty(MessageConst.PROPERTY_CONSUME_START_TIMESTAMP);
     }
 
+    /**
+     * clone message 浅拷贝
+     * @param msg
+     * @return
+     */
     public static Message cloneMessage(final Message msg) {
         Message newMsg = new Message(msg.getTopic(), msg.getBody());
         newMsg.setFlag(msg.getFlag());

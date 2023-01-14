@@ -34,14 +34,35 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 
 public class ConsumerGroupInfo {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    /**
+     * 消费组名称
+     */
     private final String groupName;
+    /**
+     * key 为对应的  topic ,value 为 订阅信息,消费组订阅的 topic
+     */
     private final ConcurrentMap<String/* Topic */, SubscriptionData> subscriptionTable =
         new ConcurrentHashMap<String, SubscriptionData>();
+    /**
+     * key 为 消费者 channel 连接 ,value 为消费者客户端信息
+     */
     private final ConcurrentMap<Channel, ClientChannelInfo> channelInfoTable =
         new ConcurrentHashMap<Channel, ClientChannelInfo>(16);
+    /**
+     * 消息类型 PULL 还是 PUSH
+     */
     private volatile ConsumeType consumeType;
+    /**
+     * 消费模式 是 BROADCASTING 还是 CLUSTERING
+     */
     private volatile MessageModel messageModel;
+    /**
+     * 从何处开始消费
+     */
     private volatile ConsumeFromWhere consumeFromWhere;
+    /**
+     * 最近更新时间
+     */
     private volatile long lastUpdateTimestamp = System.currentTimeMillis();
 
     public ConsumerGroupInfo(String groupName, ConsumeType consumeType, MessageModel messageModel,
@@ -52,7 +73,13 @@ public class ConsumerGroupInfo {
         this.consumeFromWhere = consumeFromWhere;
     }
 
+    /**
+     * 遍历channelInfoTable 找到 对应对应 客户端Id 的客户端信息
+     * @param clientId
+     * @return
+     */
     public ClientChannelInfo findChannel(final String clientId) {
+        //遍历channelInfoTable 找到 对应对应 客户端Id 的客户端信息
         Iterator<Entry<Channel, ClientChannelInfo>> it = this.channelInfoTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<Channel, ClientChannelInfo> next = it.next();
@@ -119,6 +146,7 @@ public class ConsumerGroupInfo {
     }
 
     /**
+     * 更新 信息 如果客户端 id 发送改变 则 添加新的映射 如果不存在 映射 则建立映射
      * Update {@link #channelInfoTable} in {@link ConsumerGroupInfo}
      *
      * @param infoNew Channel info of new client.
@@ -133,9 +161,10 @@ public class ConsumerGroupInfo {
         this.consumeType = consumeType;
         this.messageModel = messageModel;
         this.consumeFromWhere = consumeFromWhere;
-
+        //根据 channel 获取 就的 客户端信息
         ClientChannelInfo infoOld = this.channelInfoTable.get(infoNew.getChannel());
         if (null == infoOld) {
+            //添加新的 映射
             ClientChannelInfo prev = this.channelInfoTable.put(infoNew.getChannel(), infoNew);
             if (null == prev) {
                 log.info("new consumer connected, group: {} {} {} channel: {}", this.groupName, consumeType,
@@ -145,6 +174,7 @@ public class ConsumerGroupInfo {
 
             infoOld = infoNew;
         } else {
+            //旧的客户端 id 和 新的客户端端 id 不是 同一个 则 添加新的 映射
             if (!infoOld.getClientId().equals(infoNew.getClientId())) {
                 log.error(
                     "ConsumerGroupInfo: consumer channel exists in broker, but clientId is not the same one, "
@@ -153,7 +183,7 @@ public class ConsumerGroupInfo {
                 this.channelInfoTable.put(infoNew.getChannel(), infoNew);
             }
         }
-
+        //记录最新修改信息
         this.lastUpdateTimestamp = System.currentTimeMillis();
         infoOld.setLastUpdateTimestamp(this.lastUpdateTimestamp);
 
@@ -161,6 +191,7 @@ public class ConsumerGroupInfo {
     }
 
     /**
+     * 遍历 subList 如果订阅信息 不存在该topic 订阅 则 添加 如果已经存在 则判断判 版本进行修改
      * Update subscription.
      *
      * @param subList set of {@link SubscriptionData}
@@ -168,7 +199,7 @@ public class ConsumerGroupInfo {
      */
     public boolean updateSubscription(final Set<SubscriptionData> subList) {
         boolean updated = false;
-
+        //遍历 subList 如果订阅信息 不存在该topic 订阅 则 添加 如果已经存在 则判断判 版本进行修改
         for (SubscriptionData sub : subList) {
             SubscriptionData old = this.subscriptionTable.get(sub.getTopic());
             if (old == null) {

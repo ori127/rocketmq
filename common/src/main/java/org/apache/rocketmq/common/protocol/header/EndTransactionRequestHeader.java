@@ -31,6 +31,9 @@ public class EndTransactionRequestHeader implements CommandCustomHeader {
     private Long tranStateTableOffset;
     @CFNotNull
     private Long commitLogOffset;
+    /**
+     * 提交事务 还是 回滚事务
+     */
     @CFNotNull
     private Integer commitOrRollback; // TRANSACTION_COMMIT_TYPE
     // TRANSACTION_ROLLBACK_TYPE

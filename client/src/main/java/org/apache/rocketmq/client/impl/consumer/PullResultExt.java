@@ -23,6 +23,9 @@ import org.apache.rocketmq.common.message.MessageExt;
 
 public class PullResultExt extends PullResult {
     private final long suggestWhichBrokerId;
+    /**
+     * 消息的二进制
+     */
     private byte[] messageBinary;
 
     private final Long offsetDelta;

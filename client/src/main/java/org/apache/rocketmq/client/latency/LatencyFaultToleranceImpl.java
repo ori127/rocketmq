@@ -25,29 +25,47 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.rocketmq.client.common.ThreadLocalIndex;
 
 public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> {
+    /**
+     * key 为 brokerName
+     */
     private final ConcurrentHashMap<String, FaultItem> faultItemTable = new ConcurrentHashMap<String, FaultItem>(16);
-
+    /**
+     * 哪个一个
+     */
     private final ThreadLocalIndex whichItemWorst = new ThreadLocalIndex();
 
+    /**
+     * 更新故障项
+     * @param name
+     * @param currentLatency
+     * @param notAvailableDuration
+     */
     @Override
     public void updateFaultItem(final String name, final long currentLatency, final long notAvailableDuration) {
         FaultItem old = this.faultItemTable.get(name);
         if (null == old) {
+            //不存在 则进行创建
             final FaultItem faultItem = new FaultItem(name);
             faultItem.setCurrentLatency(currentLatency);
             faultItem.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
-
+            //由于并发可能导致 已经设置 重新设置 latency 结束延迟之后 时间点
             old = this.faultItemTable.putIfAbsent(name, faultItem);
             if (old != null) {
                 old.setCurrentLatency(currentLatency);
                 old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
             }
         } else {
+            //已经存在 重新设置 latency 结束延迟之后 时间点
             old.setCurrentLatency(currentLatency);
             old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
         }
     }
 
+    /**
+     * 判断该 broker 是否已经结束延迟
+     * @param name
+     * @return
+     */
     @Override
     public boolean isAvailable(final String name) {
         final FaultItem faultItem = this.faultItemTable.get(name);
@@ -71,6 +89,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
             tmpList.add(faultItem);
         }
         if (!tmpList.isEmpty()) {
+            //进行排序 从列表的一半 选择一个获取
             Collections.sort(tmpList);
             final int half = tmpList.size() / 2;
             if (half <= 0) {
@@ -92,14 +111,25 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
     }
 
     class FaultItem implements Comparable<FaultItem> {
+        /**
+         * brokerName
+         */
         private final String name;
         private volatile long currentLatency;
+        /**
+         * 结束延迟之后 时间点
+         */
         private volatile long startTimestamp;
 
         public FaultItem(final String name) {
             this.name = name;
         }
 
+        /**
+         * 比较规则 结束延迟优先 然后是 currentLatency 再 比较 startTimestamp 结束延迟的时间点
+         * @param other the object to be compared.
+         * @return
+         */
         @Override
         public int compareTo(final FaultItem other) {
             if (this.isAvailable() != other.isAvailable()) {
@@ -125,6 +155,10 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
             return 0;
         }
 
+        /**
+         * 当前时间是否超过延迟结束的时间点 结束延迟
+         * @return
+         */
         public boolean isAvailable() {
             return (System.currentTimeMillis() - startTimestamp) >= 0;
         }

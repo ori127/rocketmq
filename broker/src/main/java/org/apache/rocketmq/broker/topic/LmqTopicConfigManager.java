@@ -21,6 +21,9 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.constant.PermName;
 
+/**
+ * 轻量消息队列 topic 配置管理
+ */
 public class LmqTopicConfigManager extends TopicConfigManager {
     public LmqTopicConfigManager(BrokerController brokerController) {
         super(brokerController);
@@ -28,6 +31,7 @@ public class LmqTopicConfigManager extends TopicConfigManager {
 
     @Override
     public TopicConfig selectTopicConfig(final String topic) {
+        //是否是轻量消息队列 如果是 则直接返回 simpleLmqTopicConfig 否者从 配置管理中获取 该topic 配置
         if (MixAll.isLmq(topic)) {
             return simpleLmqTopicConfig(topic);
         }
@@ -36,6 +40,7 @@ public class LmqTopicConfigManager extends TopicConfigManager {
 
     @Override
     public void updateTopicConfig(final TopicConfig topicConfig) {
+        //轻量消息队列 无法进行更新
         if (topicConfig == null || MixAll.isLmq(topicConfig.getTopicName())) {
             return;
         }

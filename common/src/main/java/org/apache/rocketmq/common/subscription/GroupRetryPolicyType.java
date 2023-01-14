@@ -17,6 +17,9 @@
 
 package org.apache.rocketmq.common.subscription;
 
+/**
+ * 组的重试策略类型
+ */
 public enum GroupRetryPolicyType {
     EXPONENTIAL,
     CUSTOMIZED

@@ -21,9 +21,17 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class CheckClientRequestBody extends RemotingSerializable {
-
+    /**
+     * 客户端id
+     */
     private String clientId;
+    /**
+     * 客户端组
+     */
     private String group;
+    /**
+     * 订阅数据
+     */
     private SubscriptionData subscriptionData;
     private String namespace;
 

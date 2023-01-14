@@ -144,6 +144,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return false;
     }
 
+    /**
+     * 根据 namespace key value 设置配置信息 持久化
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     public RemotingCommand putKVConfig(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -165,7 +172,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         response.setRemark(null);
         return response;
     }
-
+    /**
+     * 根据 namespace key 获取值
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     public RemotingCommand getKVConfig(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(GetKVConfigResponseHeader.class);
@@ -189,7 +202,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         response.setRemark("No config item, Namespace: " + requestHeader.getNamespace() + " Key: " + requestHeader.getKey());
         return response;
     }
-
+    /**
+     * 根据 namespace key  删除配置 持久化
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     public RemotingCommand deleteKVConfig(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -206,13 +225,20 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 注册 Broker
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     public RemotingCommand registerBroker(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(RegisterBrokerResponseHeader.class);
         final RegisterBrokerResponseHeader responseHeader = (RegisterBrokerResponseHeader) response.readCustomHeader();
         final RegisterBrokerRequestHeader requestHeader =
             (RegisterBrokerRequestHeader) request.decodeCommandCustomHeader(RegisterBrokerRequestHeader.class);
-
+        //检查校验和
         if (!checksum(ctx, request, requestHeader)) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark("crc32 not match");
@@ -228,6 +254,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             topicConfigWrapper = registerBrokerBody.getTopicConfigSerializeWrapper();
             filterServerList = registerBrokerBody.getFilterServerList();
         } else {
+            //旧版本的RegisterBrokerBody仅包含TopicConfig
             // RegisterBrokerBody of old version only contains TopicConfig.
             topicConfigWrapper = extractRegisterTopicConfigFromRequest(request);
         }
@@ -245,7 +272,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             filterServerList,
             ctx.channel()
         );
-
+        //注册单个路由应该在完成Broker第一次注册之后
         if (result == null) {
             // Register single topic route info should be after the broker completes the first registration.
             response.setCode(ResponseCode.SYSTEM_ERROR);
@@ -255,7 +282,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
 
         responseHeader.setHaServerAddr(result.getHaServerAddr());
         responseHeader.setMasterAddr(result.getMasterAddr());
-
+        //获取顺序配置
         if (this.namesrvController.getNamesrvConfig().isReturnOrderTopicConfigToBroker()) {
             byte[] jsonValue = this.namesrvController.getKvConfigManager().getKVListByNamespace(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG);
             response.setBody(jsonValue);
@@ -279,6 +306,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return topicConfigWrapper;
     }
 
+    /**
+     * 从RemotingCommand 解析成 RegisterBrokerBody
+     * @param request
+     * @param requestHeader
+     * @return
+     * @throws RemotingCommandException
+     */
     private RegisterBrokerBody extractRegisterBrokerBodyFromRequest(RemotingCommand request,
         RegisterBrokerRequestHeader requestHeader) throws RemotingCommandException {
         RegisterBrokerBody registerBrokerBody = new RegisterBrokerBody();
@@ -297,6 +331,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return registerBrokerBody;
     }
 
+    /**
+     * 获取集群下 的 broker 下的 broker 节点列表
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private RemotingCommand getBrokerMemberGroup(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         GetBrokerMemberGroupRequestHeader requestHeader = (GetBrokerMemberGroupRequestHeader) request.decodeCommandCustomHeader(GetBrokerMemberGroupRequestHeader.class);
@@ -326,6 +367,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return true;
     }
 
+    /**
+     * 获取版本信息
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     public RemotingCommand queryBrokerTopicConfig(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(QueryDataVersionResponseHeader.class);
@@ -337,8 +385,9 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         String brokerAddr = requestHeader.getBrokerAddr();
 
         Boolean changed = this.namesrvController.getRouteInfoManager().isBrokerTopicConfigChanged(clusterName, brokerAddr, dataVersion);
+        //更新该 broker 最近更新时间
         this.namesrvController.getRouteInfoManager().updateBrokerInfoUpdateTimestamp(clusterName, brokerAddr);
-
+        //根据 clusterName 获取 版本信息
         DataVersion nameSeverDataVersion = this.namesrvController.getRouteInfoManager().queryBrokerTopicConfig(clusterName, brokerAddr);
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
@@ -350,6 +399,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 取消注册broker
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     public RemotingCommand unregisterBroker(ChannelHandlerContext ctx,
             RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -366,6 +422,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 接受心跳新农村 修改更新时间
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     public RemotingCommand brokerHeartbeat(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -380,6 +443,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 获取所有集群信息
+     * @param ctx
+     * @param request
+     * @return
+     */
     private RemotingCommand getBrokerClusterInfo(ChannelHandlerContext ctx, RemotingCommand request) {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
 
@@ -390,7 +459,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         response.setRemark(null);
         return response;
     }
-
+    /**
+     * 给该 broker 下的 Queue删除 读写权限
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private RemotingCommand wipeWritePermOfBroker(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(WipeWritePermOfBrokerResponseHeader.class);
@@ -413,6 +488,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 给该 broker 下的 Queue添加 读写权限
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private RemotingCommand addWritePermOfBroker(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(AddWritePermOfBrokerResponseHeader.class);
@@ -432,6 +514,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 获取所有 topic 信息
+     * @param ctx
+     * @param request
+     * @return
+     */
     private RemotingCommand getAllTopicListFromNameserver(ChannelHandlerContext ctx, RemotingCommand request) {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
         boolean enableAllTopicList = namesrvController.getNamesrvConfig().isEnableAllTopicList();
@@ -449,6 +537,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 注册topic queueDatas
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private RemotingCommand registerTopicToNamesrv(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -466,6 +561,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 删除对应 topic
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private RemotingCommand deleteTopicInNamesrv(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -484,6 +586,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 根据 namespace 获取 key value
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private RemotingCommand getKVListByNamespace(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -504,6 +613,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 获取集群下面的topic 集合
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private RemotingCommand getTopicsByCluster(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -598,6 +714,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 更新属性配置 不持久化
+     * @param ctx
+     * @param request
+     * @return
+     */
     private RemotingCommand updateConfig(ChannelHandlerContext ctx, RemotingCommand request) {
         if (ctx != null) {
             log.info("updateConfig called by {}", RemotingHelper.parseChannelRemoteAddr(ctx.channel()));
@@ -633,6 +755,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 获取所有属性配置
+     * @param ctx
+     * @param request
+     * @return
+     */
     private RemotingCommand getConfig(ChannelHandlerContext ctx, RemotingCommand request) {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
 
@@ -653,6 +781,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /***
+     * 获取客户端属性配置
+     * @param ctx
+     * @param request
+     * @return
+     */
     private RemotingCommand getClientConfigs(ChannelHandlerContext ctx, RemotingCommand request) {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
         final GetRemoteClientConfigBody body = GetRemoteClientConfigBody.decode(request.getBody(), GetRemoteClientConfigBody.class);

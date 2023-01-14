@@ -28,8 +28,13 @@ import org.apache.rocketmq.common.message.MessageQueue;
  * Consistent Hashing queue algorithm
  */
 public class AllocateMessageQueueConsistentHash extends AbstractAllocateMessageQueueStrategy {
-
+    /**
+     * 虚拟节点数量
+     */
     private final int virtualNodeCnt;
+    /**
+     * hash函数
+     */
     private final HashFunction customHashFunction;
 
     public AllocateMessageQueueConsistentHash() {
@@ -58,10 +63,11 @@ public class AllocateMessageQueueConsistentHash extends AbstractAllocateMessageQ
         }
 
         Collection<ClientNode> cidNodes = new ArrayList<ClientNode>();
+        //将客户端id 生成  ClientNode
         for (String cid : cidAll) {
             cidNodes.add(new ClientNode(cid));
         }
-
+        //添加到hash一致性当中
         final ConsistentHashRouter<ClientNode> router; //for building hash ring
         if (customHashFunction != null) {
             router = new ConsistentHashRouter<ClientNode>(cidNodes, virtualNodeCnt, customHashFunction);
@@ -71,6 +77,7 @@ public class AllocateMessageQueueConsistentHash extends AbstractAllocateMessageQ
 
         List<MessageQueue> results = new ArrayList<MessageQueue>();
         for (MessageQueue mq : mqAll) {
+            //计算该MessageQueue 所有映射到 节点是 当前节点
             ClientNode clientNode = router.routeNode(mq.toString());
             if (clientNode != null && currentCID.equals(clientNode.getKey())) {
                 results.add(mq);

@@ -44,6 +44,9 @@ public class SendMessageContext {
     private String msgUniqueKey;
     private long bornTimeStamp;
     private long requestTimeStamp;
+    /**
+     * 消息类型
+     */
     private MessageType msgType = MessageType.Trans_msg_Commit;
 
     private boolean isSuccess = false;

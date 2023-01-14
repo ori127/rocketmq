@@ -19,7 +19,13 @@ package org.apache.rocketmq.remoting.common;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * 用来释放信号量
+ */
 public class SemaphoreReleaseOnlyOnce {
+    /**
+     * 信号量释放已经被释放标志
+     */
     private final AtomicBoolean released = new AtomicBoolean(false);
     private final Semaphore semaphore;
 
@@ -28,6 +34,7 @@ public class SemaphoreReleaseOnlyOnce {
     }
 
     public void release() {
+        //号量释放已经被释放标志 未被释放则进行释放
         if (this.semaphore != null) {
             if (this.released.compareAndSet(false, true)) {
                 this.semaphore.release();

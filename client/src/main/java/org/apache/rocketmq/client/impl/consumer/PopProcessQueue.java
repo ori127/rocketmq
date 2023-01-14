@@ -25,9 +25,17 @@ import org.apache.rocketmq.common.protocol.body.PopProcessQueueInfo;
 public class PopProcessQueue {
 
     private final static long PULL_MAX_IDLE_TIME = Long.parseLong(System.getProperty("rocketmq.client.pull.pullMaxIdleTime", "120000"));
-
+    /**
+     * 最近 pop 时间
+     */
     private long lastPopTimestamp;
+    /**
+     * 等待 Ack 计数
+     */
     private AtomicInteger waitAckCounter = new AtomicInteger(0);
+    /**
+     * 是否被丢球
+     */
     private volatile boolean dropped = false;
 
     public long getLastPopTimestamp() {
@@ -43,6 +51,7 @@ public class PopProcessQueue {
     }
 
     /**
+     * 减少 ack 计数
      * @return the value before decrement.
      */
     public int ack() {

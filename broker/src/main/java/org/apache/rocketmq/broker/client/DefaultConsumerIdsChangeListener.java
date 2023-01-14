@@ -33,14 +33,24 @@ import org.apache.rocketmq.common.utils.ThreadUtils;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * 消费客户端发生改变监听
+ */
 public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListener {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
+    /**
+     * 缓存大小
+     */
     private final int cacheSize = 8096;
-
+    /**
+     * 定时处理 consumerChannelMap  消费者发生改变监听 调用
+     */
     private final ScheduledExecutorService scheduledExecutorService =  new ScheduledThreadPoolExecutor(1,
         ThreadUtils.newGenericThreadFactory("DefaultConsumerIdsChangeListener", true));
-
+    /**
+     * key 为 消费组 ,value 为 发生改变的 消费组客户端 发生改变的缓存
+     */
     private ConcurrentHashMap<String,List<Channel>> consumerChannelMap = new ConcurrentHashMap<>(cacheSize);
 
     public DefaultConsumerIdsChangeListener(BrokerController brokerController) {
@@ -71,22 +81,26 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
                 }
                 List<Channel> channels = (List<Channel>) args[0];
                 if (channels != null && brokerController.getBrokerConfig().isNotifyConsumerIdsChangedEnable()) {
+                    //事实通知消费者发生改变
                     if (this.brokerController.getBrokerConfig().isRealTimeNotifyConsumerChange()) {
                         for (Channel chl : channels) {
                             this.brokerController.getBroker2Client().notifyConsumerIdsChanged(chl, group);
                         }
                     } else {
+                        //不是事实的则 添加到 consumerChannelMap 定时通知
                         consumerChannelMap.put(group, channels);
                     }
                 }
                 break;
             case UNREGISTER:
+                //消费过滤 取消该消息组的注册
                 this.brokerController.getConsumerFilterManager().unRegister(group);
                 break;
             case REGISTER:
                 if (args == null || args.length < 1) {
                     return;
                 }
+                //消费过滤 注册该消息组的
                 Collection<SubscriptionData> subscriptionDataList = (Collection<SubscriptionData>) args[0];
                 this.brokerController.getConsumerFilterManager().register(group, subscriptionDataList);
                 break;
@@ -98,6 +112,9 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
         }
     }
 
+    /**
+     * 通知客户端消费发生改变
+     */
     private void notifyConsumerChange() {
 
         if (consumerChannelMap.isEmpty()) {
@@ -106,7 +123,7 @@ public class DefaultConsumerIdsChangeListener implements ConsumerIdsChangeListen
 
         ConcurrentHashMap<String, List<Channel>> processMap = new ConcurrentHashMap<>(consumerChannelMap);
         consumerChannelMap = new ConcurrentHashMap<>(cacheSize);
-
+        //遍历消费者 客户端发生改变客户端 通知客户端发生改变
         for (Map.Entry<String, List<Channel>> entry : processMap.entrySet()) {
             String consumerId = entry.getKey();
             List<Channel> channelList = entry.getValue();

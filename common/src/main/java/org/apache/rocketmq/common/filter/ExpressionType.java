@@ -20,6 +20,7 @@ package org.apache.rocketmq.common.filter;
 public class ExpressionType {
 
     /**
+     * 根据SQL 来进行过滤
      * <ul>
      * Keywords:
      * <li>{@code AND, OR, NOT, BETWEEN, IN, TRUE, FALSE, IS, NULL}</li>
@@ -52,6 +53,7 @@ public class ExpressionType {
     public static final String SQL92 = "SQL92";
 
     /**
+     * 根据 TAG 来进行过滤
      * Only support or operation such as
      * "tag1 || tag2 || tag3", <br>
      * If null or * expression,meaning subscribe all.

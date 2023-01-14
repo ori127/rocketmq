@@ -34,18 +34,22 @@ public abstract class AbstractHAReader {
         int readSizeZeroTimes = 0;
         while (byteBufferRead.hasRemaining()) {
             try {
+                //如果还有剩余 则向  从该通道读取字节 调用读 后钩子
                 int readSize = socketChannel.read(byteBufferRead);
                 for (HAReadHook readHook : readHookList) {
                     readHook.afterRead(readSize);
                 }
+                //如果有字节读取 则 重新计数
                 if (readSize > 0) {
                     readSizeZeroTimes = 0;
+                    //处理读取byteBuffer
                     boolean result = processReadResult(byteBufferRead);
                     if (!result) {
                         LOGGER.error("Process read result failed");
                         return false;
                     }
                 } else if (readSize == 0) {
+                    //如果连续读取字节为0的次数超过3次则退出
                     if (++readSizeZeroTimes >= 3) {
                         break;
                     }

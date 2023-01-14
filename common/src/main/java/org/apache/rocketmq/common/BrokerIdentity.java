@@ -32,11 +32,19 @@ public class BrokerIdentity {
     protected static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
     public static final BrokerIdentity BROKER_CONTAINER_IDENTITY = new BrokerIdentity(true);
-
+    /**
+     * brokerName
+     */
     @ImportantField
     private String brokerName = localHostName();
+    /**
+     * broker集群的名称
+     */
     @ImportantField
     private String brokerClusterName = DEFAULT_CLUSTER_NAME;
+    /**
+     * brokerId
+     */
     @ImportantField
     private volatile long brokerId = MixAll.MASTER_ID;
 

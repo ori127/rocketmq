@@ -58,6 +58,7 @@ public class RpcClientImpl implements RpcClient {
 
     @Override
     public Future<RpcResponse>  invoke(MessageQueue mq, RpcRequest request, long timeoutMs) throws RpcException {
+        // 根据 MessageQueue 的 topic 获取 该 topic MessageQueue=> brokerName 然后再 获取该 brokerName
         String bname =  clientMetadata.getBrokerNameFromMessageQueue(mq);
         request.getHeader().setBname(bname);
         return invoke(request, timeoutMs);
@@ -70,6 +71,7 @@ public class RpcClientImpl implements RpcClient {
 
     @Override
     public Future<RpcResponse>  invoke(RpcRequest request, long timeoutMs) throws RpcException {
+        //执行前置钩子
         if (clientHookList.size() > 0) {
             for (RpcClientHook rpcClientHook: clientHookList) {
                 RpcResponse response = rpcClientHook.beforeRequest(request);
@@ -79,6 +81,7 @@ public class RpcClientImpl implements RpcClient {
                 }
             }
         }
+        //获取该 broker 的 主 broker 的 地址
         String addr = getBrokerAddrByNameOrException(request.getHeader().bname);
         Promise<RpcResponse> rpcResponsePromise = null;
         try {
@@ -121,7 +124,12 @@ public class RpcClientImpl implements RpcClient {
         return rpcResponsePromise;
     }
 
-
+    /**
+     * 获取该 broker 的 主 broker 的 地址
+     * @param bname
+     * @return
+     * @throws RpcException
+     */
     private String getBrokerAddrByNameOrException(String bname) throws RpcException {
         String addr = this.clientMetadata.findMasterBrokerAddr(bname);
         if (addr == null) {
@@ -130,7 +138,13 @@ public class RpcClientImpl implements RpcClient {
         return addr;
     }
 
-
+    /**
+     * 处理失败响应
+     * @param addr
+     * @param requestCommand
+     * @param responseFuture
+     * @param rpcResponsePromise
+     */
     private void processFailedResponse(String addr, RemotingCommand requestCommand,  ResponseFuture responseFuture, Promise<RpcResponse> rpcResponsePromise) {
         RemotingCommand responseCommand = responseFuture.getResponseCommand();
         if (responseCommand != null) {
@@ -139,10 +153,12 @@ public class RpcClientImpl implements RpcClient {
         }
         int errorCode = ResponseCode.RPC_UNKNOWN;
         String errorMessage = null;
+        //没有发送成功 RPC_SEND_TO_CHANNEL_FAILED
         if (!responseFuture.isSendRequestOK()) {
             errorCode = ResponseCode.RPC_SEND_TO_CHANNEL_FAILED;
             errorMessage = "send request failed to " + addr + ". Request: " + requestCommand;
         } else if (responseFuture.isTimeout()) {
+            //超时 RPC_TIME_OUT
             errorCode = ResponseCode.RPC_TIME_OUT;
             errorMessage = "wait response from " + addr + " timeout :" + responseFuture.getTimeoutMillis() + "ms" + ". Request: " + requestCommand;
         } else {

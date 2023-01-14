@@ -20,11 +20,29 @@
  */
 package org.apache.rocketmq.common.protocol.route;
 
+/**
+ * 队列信息
+ */
 public class QueueData implements Comparable<QueueData> {
+    /**
+     * broker 名称
+     */
     private String brokerName;
+    /**
+     * 读队列数量
+     */
     private int readQueueNums;
+    /**
+     * 写队列数量
+     */
     private int writeQueueNums;
+    /**
+     * 该队列读写权限
+     */
     private int perm;
+    /**
+     * TODO::TopicSysFlag 这个标记作用是 干什么的
+     */
     private int topicSysFlag;
 
     public QueueData() {

@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.common.namesrv;
 
+/**
+ * NameServer 更新 钩子
+ */
 public interface NameServerUpdateCallback {
     String onNameServerAddressChange(String namesrvAddress);
 }

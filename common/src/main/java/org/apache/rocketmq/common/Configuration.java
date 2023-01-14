@@ -39,6 +39,9 @@ public class Configuration {
     private Object storePathObject;
     private Field storePathField;
     private DataVersion dataVersion = new DataVersion();
+    /**
+     * 锁
+     */
     private ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     /**
      * All properties include configs in object and extend properties.
@@ -175,19 +178,26 @@ public class Configuration {
         this.storePath = storePath;
     }
 
+
+    /**
+     * 合并存在的属性 allConfigs 然后遍历配置 设置对应的属性
+     * @param properties
+     */
     public void update(Properties properties) {
         try {
+            //上锁
             readWriteLock.writeLock().lockInterruptibly();
 
             try {
                 // the property must be exist when update
+                //属性存在 就信息更新
                 mergeIfExist(properties, this.allConfigs);
-
+                //遍历所有配置 进行属性 设置
                 for (Object configObject : configObjectList) {
                     // not allConfigs to update...
                     MixAll.properties2Object(properties, configObject);
                 }
-
+                //添加版本
                 this.dataVersion.nextVersion();
 
             } finally {
@@ -219,6 +229,10 @@ public class Configuration {
         }
     }
 
+    /**
+     * 遍历配置类 所有字段 不是Static 不是 this 开头的属性 添加 到属性当中 合并所有属性
+     * @return
+     */
     public String getAllConfigsFormatString() {
         try {
             readWriteLock.readLock().lockInterruptibly();
@@ -277,12 +291,18 @@ public class Configuration {
         return null;
     }
 
+    /**
+     * 遍历配置类 所有字段 不是Static 不是 this 开头的属性 添加 到属性当中 合并所有属性
+     * @return
+     */
     private String getAllConfigsInternal() {
         StringBuilder stringBuilder = new StringBuilder();
 
         // reload from config object ?
         for (Object configObject : this.configObjectList) {
+            //遍历配置类 所有字段 不是Static 不是 this 开头的属性 添加 到属性当中
             Properties properties = MixAll.object2Properties(configObject);
+            //合并所有属性
             if (properties != null) {
                 merge(properties, this.allConfigs);
             } else {
@@ -317,6 +337,11 @@ public class Configuration {
         return stringBuilder.toString();
     }
 
+    /**
+     * 两个属性进行合并
+     * @param from
+     * @param to
+     */
     private void merge(Properties from, Properties to) {
         for (Entry<Object, Object> next : from.entrySet()) {
             Object fromObj = next.getValue(), toObj = to.get(next.getKey());
@@ -327,6 +352,11 @@ public class Configuration {
         }
     }
 
+    /**
+     * 合并存在的属性
+     * @param from
+     * @param to
+     */
     private void mergeIfExist(Properties from, Properties to) {
         for (Entry<Object, Object> next : from.entrySet()) {
             if (!to.containsKey(next.getKey())) {

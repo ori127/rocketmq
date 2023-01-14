@@ -30,18 +30,29 @@ import org.apache.rocketmq.common.MixAll;
  * that it belongs to, and all the single instance information for this cluster.
  */
 public class BrokerData implements Comparable<BrokerData> {
+    /**
+     * 集群名称
+     */
     private String cluster;
+    /**
+     * brokerName
+     */
     private String brokerName;
 
     /**
      * The container that store the all single instances for the current broker replication cluster.
      * The key is the brokerId, and the value is the address of the single broker instance.
+     * key 是 brokerId , value 是 broker 地址
      */
     private HashMap<Long, String> brokerAddrs;
+    /**
+     * 区域名
+     */
     private String zoneName;
     private final Random random = new Random();
 
     /**
+     * 是否自动选主
      * Enable acting master or not, used for old version HA adaption,
      */
     private boolean enableActingMaster = false;
@@ -81,6 +92,7 @@ public class BrokerData implements Comparable<BrokerData> {
     }
 
     /**
+     * 从 Broker 节点列表 找主 地址 如果 找 则随机获取 一个
      * Selects a (preferably master) broker address from the registered list. If the master's address cannot be found, a
      * slave broker address is selected in a random manner.
      *

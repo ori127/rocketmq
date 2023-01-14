@@ -27,11 +27,19 @@ import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.logging.InternalLogger;
 
 public class StatsItemSet {
+    /**
+     * key 为统计的key, value 为 统计的信息
+     */
     private final ConcurrentMap<String/* key */, StatsItem> statsItemTable =
         new ConcurrentHashMap<String, StatsItem>(128);
-
+    /**
+     * 统计的名称
+     */
     private final String statsName;
     private final ScheduledExecutorService scheduledExecutorService;
+    /**
+     * 日志信息
+     */
     private final InternalLogger log;
 
     public StatsItemSet(String statsName, ScheduledExecutorService scheduledExecutorService, InternalLogger log) {
@@ -201,22 +209,41 @@ public class StatsItemSet {
         }
     }
 
+    /**
+     * 创建状态统计项
+     * @param statsKey
+     * @return
+     */
     public StatsItem getAndCreateStatsItem(final String statsKey) {
         return getAndCreateItem(statsKey, false);
     }
 
+    /**
+     * 创建响应时间统计项
+     * @param statsKey
+     * @return
+     */
     public StatsItem getAndCreateRTStatsItem(final String statsKey) {
         return getAndCreateItem(statsKey, true);
     }
 
+    /**
+     * 创建统计项
+     * @param statsKey
+     * @param rtItem
+     * @return
+     */
     public StatsItem getAndCreateItem(final String statsKey, boolean rtItem) {
         StatsItem statsItem = this.statsItemTable.get(statsKey);
         if (null == statsItem) {
+            //创建响应时间的统计
             if (rtItem) {
                 statsItem = new RTStatsItem(this.statsName, statsKey, this.scheduledExecutorService, this.log);
             } else {
+                //普陀状态的统计
                 statsItem = new StatsItem(this.statsName, statsKey, this.scheduledExecutorService, this.log);
             }
+            //进行映射
             StatsItem prev = this.statsItemTable.putIfAbsent(statsKey, statsItem);
 
             if (null != prev) {

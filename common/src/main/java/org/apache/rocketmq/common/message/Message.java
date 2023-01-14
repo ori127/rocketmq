@@ -22,13 +22,27 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 消息对象
+ */
 public class Message implements Serializable {
     private static final long serialVersionUID = 8445773977080406428L;
-
+    /**
+     * 当前消息的topic
+     */
     private String topic;
     private int flag;
+    /**
+     * 消息属性
+     */
     private Map<String, String> properties;
+    /**
+     * 消息体
+     */
     private byte[] body;
+    /**
+     * 事务id
+     */
     private String transactionId;
 
     public Message() {
@@ -160,6 +174,10 @@ public class Message implements Serializable {
         this.putProperty(MessageConst.PROPERTY_WAIT_STORE_MSG_OK, Boolean.toString(waitStoreMsgOK));
     }
 
+    /**
+     * 设置消息 INSTANCE_ID 为客户端的 namespace
+     * @param instanceId
+     */
     public void setInstanceId(String instanceId) {
         this.putProperty(MessageConst.PROPERTY_INSTANCE_ID, instanceId);
     }

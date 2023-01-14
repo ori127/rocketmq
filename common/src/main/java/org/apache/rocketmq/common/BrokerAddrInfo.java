@@ -16,10 +16,21 @@
  */
 package org.apache.rocketmq.common;
 
+/**
+ * broker 地址信息
+ */
 public class BrokerAddrInfo {
+    /**
+     * 集群名称
+     */
     private final String clusterName;
+    /**
+     * broker 地址
+     */
     private final String brokerAddr;
-
+    /**
+     * hash 计算缓存
+     */
     private int hash;
 
     public BrokerAddrInfo(String clusterName, String brokerAddr) {

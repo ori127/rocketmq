@@ -16,15 +16,26 @@
  */
 package org.apache.rocketmq.common.consumer;
 
+/**
+ * 从哪里开始消费
+ */
 public enum ConsumeFromWhere {
+    /**
+     * 最近的消费点位
+     */
     CONSUME_FROM_LAST_OFFSET,
-
     @Deprecated
     CONSUME_FROM_LAST_OFFSET_AND_FROM_MIN_WHEN_BOOT_FIRST,
     @Deprecated
     CONSUME_FROM_MIN_OFFSET,
     @Deprecated
     CONSUME_FROM_MAX_OFFSET,
+    /**
+     * 是消费者分组首次启动消费者消费消息时，服务端保存的消费位点的初始值
+     */
     CONSUME_FROM_FIRST_OFFSET,
+    /**
+     * 某一时刻对应的消费位点
+     */
     CONSUME_FROM_TIMESTAMP,
 }

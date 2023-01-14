@@ -27,6 +27,9 @@ public class MessageStoreConfig {
     public static final String MULTI_PATH_SPLITTER = System.getProperty("rocketmq.broker.multiPathSplitter", ",");
 
     //The root directory in which the log data is kept
+    /**
+     * 存储的根路径
+     */
     @ImportantField
     private String storePathRootDir = System.getProperty("user.home") + File.separator + "store";
 
@@ -41,10 +44,15 @@ public class MessageStoreConfig {
     @ImportantField
     private String storePathEpochFile = System.getProperty("user.home") + File.separator + "store"
         + File.separator + "epochFileCheckpoint";
-
+    /**
+     * 只读提交日志存储路径
+     */
     private String readOnlyCommitLogStorePaths = null;
 
     // CommitLog file size,default is 1G
+    /**
+     * CommitLog file size ,大小默认为 1G
+     */
     private int mappedFileSizeCommitLog = 1024 * 1024 * 1024;
 
     // TimerLog file size, default is 100M
@@ -90,19 +98,25 @@ public class MessageStoreConfig {
     // enable consume queue ext
     private boolean enableConsumeQueueExt = false;
     // ConsumeQueue extend file size, 48M
+    /**
+     * 消费队列 ext 的 文件大小 48M
+     */
     private int mappedFileSizeConsumeQueueExt = 48 * 1024 * 1024;
+    /**
+     * 批量消费队列 映射 文件的大小
+     */
     private int mapperFileSizeBatchConsumeQueue = 300000 * BatchConsumeQueue.CQ_STORE_UNIT_SIZE;
     // Bit count of filter bit map.
     // this will be set by pipe of calculate filter bit map.
     private int bitMapLengthConsumeQueueExt = 64;
 
     // CommitLog flush interval
-    // flush data to disk
+    // flush data to disk CommitLog 刷新间隔 刷新数据到磁盘
     @ImportantField
     private int flushIntervalCommitLog = 500;
 
     // Only used if TransientStorePool enabled
-    // flush data to FileChannel
+    // flush data to FileChannel 仅在TransientStorePool启用 将数据刷新到 FileChannel
     @ImportantField
     private int commitIntervalCommitLog = 200;
 
@@ -117,7 +131,7 @@ public class MessageStoreConfig {
      */
     private boolean useReentrantLockWhenPutMessage = true;
 
-    // Whether schedule flush
+    // Whether schedule flush 是否进定时 刷新
     @ImportantField
     private boolean flushCommitLogTimed = true;
     // ConsumeQueue flush interval
@@ -131,10 +145,16 @@ public class MessageStoreConfig {
     private int destroyMapedFileIntervalForcibly = 1000 * 120;
     private int redeleteHangedFileInterval = 1000 * 120;
     // When to delete,default is at 4 am
+    /**
+     * 删除时间 默认 上午 4点
+     */
     @ImportantField
     private String deleteWhen = "04";
     private int diskMaxUsedSpaceRatio = 75;
     // The number of hours to keep a log file before deleting it (in hours)
+    /**
+     * 文件保留时间
+     */
     @ImportantField
     private int fileReservedTime = 72;
     @ImportantField
@@ -147,15 +167,21 @@ public class MessageStoreConfig {
     // This ensures no on-the-wire or on-disk corruption to the messages occurred.
     // This check adds some overhead,so it may be disabled in cases seeking extreme performance.
     private boolean checkCRCOnRecover = true;
-    // How many pages are to be flushed when flush CommitLog
+    // How many pages are to be flushed when flush CommitLog  刷新CommitLog时 要刷新多少页
     private int flushCommitLogLeastPages = 4;
-    // How many pages are to be committed when commit data to file
+    // How many pages are to be committed when commit data to file 提交数据到文件时要提交多少页
     private int commitCommitLogLeastPages = 4;
     // Flush page size when the disk in warming state
     private int flushLeastPagesWhenWarmMapedFile = 1024 / 4 * 16;
     // How many pages are to be flushed when flush ConsumeQueue
     private int flushConsumeQueueLeastPages = 2;
+    /**
+     * 刷新提交日志的完整间隔
+     */
     private int flushCommitLogThoroughInterval = 1000 * 10;
+    /**
+     * 提交提交日志的完整间隔
+     */
     private int commitCommitLogThoroughInterval = 200;
     private int flushConsumeQueueThoroughInterval = 1000 * 60;
     @ImportantField
@@ -188,28 +214,48 @@ public class MessageStoreConfig {
     private int haMaxGapNotInSync = 1024 * 1024 * 256;
     @ImportantField
     private volatile BrokerRole brokerRole = BrokerRole.ASYNC_MASTER;
+    /**
+     * 刷新磁盘的类型
+     */
     @ImportantField
     private FlushDiskType flushDiskType = FlushDiskType.ASYNC_FLUSH;
     // Used by GroupTransferService to sync messages from master to slave
+    /**
+     * 同步刷新时间
+     */
     private int syncFlushTimeout = 1000 * 5;
     // Used by PutMessage to wait messages be flushed to disk and synchronized in current broker member group.
     private int putMessageTimeout = 1000 * 8;
     private int slaveTimeout = 3000;
+    /**
+     * 消息的延迟 等级
+     */
     private String messageDelayLevel = "1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h";
     private long flushDelayOffsetInterval = 1000 * 10;
     @ImportantField
     private boolean cleanFileForciblyEnable = true;
+    /**
+     * 启用 warmMaped
+     */
     private boolean warmMapedFileEnable = false;
     private boolean offsetCheckInSlave = false;
     private boolean debugLockEnable = false;
+    /**
+     * 启用复制
+     */
     private boolean duplicationEnable = false;
     private boolean diskFallRecorded = true;
     private long osPageCacheBusyTimeOutMills = 1000;
     private int defaultQueryMaxNum = 32;
-
+    /**
+     * 临时缓冲池是否启用
+     */
     @ImportantField
     private boolean transientStorePoolEnable = false;
     private int transientStorePoolSize = 5;
+    /**
+     * 如果没有 Buffer 在 BufferInStorePool 快速失败
+     */
     private boolean fastFailIfNoBufferInStorePool = false;
 
     // DLedger message store config
@@ -221,7 +267,9 @@ public class MessageStoreConfig {
     private boolean isEnableBatchPush = false;
 
     private boolean enableScheduleMessageStats = true;
-
+    /**
+     * 是否是轻量级 mq
+     */
     private boolean enableLmq = false;
     private boolean enableMultiDispatch = false;
     private int maxLmqConsumeQueueNum = 20000;

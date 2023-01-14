@@ -393,6 +393,7 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
     private synchronized RemotingCommand updateAndCreateTopic(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
+        //验证是否是备用
         if (validateSlave(response)) {
             return response;
         }
@@ -421,7 +422,9 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         topicConfig.setAttributes(AttributeParser.parseToMap(attributesModification));
 
         try {
+            //创建对应的 topic 的 topic配置
             this.brokerController.getTopicConfigManager().updateTopicConfig(topicConfig);
+            //然后在所有 nameServer 进行注册
             this.brokerController.registerIncrementBrokerData(topicConfig, this.brokerController.getTopicConfigManager().getDataVersion());
             response.setCode(ResponseCode.SUCCESS);
         } catch (Exception e) {
@@ -476,6 +479,13 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 删除 topic
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     private synchronized RemotingCommand deleteTopic(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -495,12 +505,15 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         if (TopicValidator.isSystemTopic(topic, response)) {
             return response;
         }
-
+        //删除该 topic 配置 然后持久化
         this.brokerController.getTopicConfigManager().deleteTopicConfig(requestHeader.getTopic());
+        //删除topic 对应的 TopicQueueMappingDetail
         this.brokerController.getTopicQueueMappingManager().delete(requestHeader.getTopic());
+        //遍历偏移量表表 找对应 topic 删除
         this.brokerController.getConsumerOffsetManager().cleanOffsetByTopic(requestHeader.getTopic());
         this.brokerController.getMessageStore()
             .cleanUnusedTopic(this.brokerController.getTopicConfigManager().getTopicConfigTable().keySet());
+        //删除无用的统计信息
         if (this.brokerController.getBrokerConfig().isAutoDeleteUnusedStats()) {
             this.brokerController.getBrokerStatsManager().onTopicDeleted(requestHeader.getTopic());
         }
@@ -673,6 +686,12 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 获取所有topic的 配置
+     * @param ctx
+     * @param request
+     * @return
+     */
     private RemotingCommand getAllTopicConfig(ChannelHandlerContext ctx, RemotingCommand request) {
         final RemotingCommand response = RemotingCommand.createResponseCommand(GetAllTopicConfigResponseHeader.class);
         // final GetAllTopicConfigResponseHeader responseHeader =
@@ -753,6 +772,7 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
                 Properties properties = MixAll.string2Properties(bodyStr);
                 if (properties != null) {
                     LOGGER.info("updateBrokerConfig, new config: [{}] client: {} ", properties, ctx.channel().remoteAddress());
+                    //更新配置属性 如果属性包含 brokerPermission 则需要 注册到所有的NameServer
                     this.brokerController.getConfiguration().update(properties);
                     if (properties.containsKey("brokerPermission")) {
                         this.brokerController.getTopicConfigManager().getDataVersion().nextVersion();
@@ -778,11 +798,17 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 获取该broker的所有配置
+     * @param ctx
+     * @param request
+     * @return
+     */
     private RemotingCommand getBrokerConfig(ChannelHandlerContext ctx, RemotingCommand request) {
 
         final RemotingCommand response = RemotingCommand.createResponseCommand(GetBrokerConfigResponseHeader.class);
         final GetBrokerConfigResponseHeader responseHeader = (GetBrokerConfigResponseHeader) response.readCustomHeader();
-
+        // 遍历配置类 所有字段 不是Static 不是 this 开头的属性 添加 到属性当中 合并所有属性
         String content = this.brokerController.getConfiguration().getAllConfigsFormatString();
         if (content != null && content.length() > 0) {
             try {
@@ -2509,6 +2535,11 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    /**
+     * 判断该 broker 是否是 备
+     * @param response
+     * @return
+     */
     private boolean validateSlave(RemotingCommand response) {
         if (this.brokerController.getMessageStoreConfig().getBrokerRole().equals(BrokerRole.SLAVE)) {
             response.setCode(ResponseCode.SYSTEM_ERROR);

@@ -32,6 +32,9 @@ import org.apache.rocketmq.store.PutMessageStatus;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * 将超过最大次的数回查事务状态的消息 进行存储 记录日志
+ */
 public class DefaultTransactionalMessageCheckListener extends AbstractTransactionalMessageCheckListener {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.TRANSACTION_LOGGER_NAME);
 
@@ -39,13 +42,20 @@ public class DefaultTransactionalMessageCheckListener extends AbstractTransactio
         super();
     }
 
+    /**
+     * 为了避免无限检查，我们将丢弃已检查超过一定次数的消息。 处理丢弃的消息
+     * @param msgExt Message to be discarded.
+     */
     @Override
     public void resolveDiscardMsg(MessageExt msgExt) {
         log.error("MsgExt:{} has been checked too many times, so discard it by moving it to system topic TRANS_CHECK_MAXTIME_TOPIC", msgExt);
 
         try {
+            //将消息转成 MessageExtBrokerInner
             MessageExtBrokerInner brokerInner = toMessageExtBrokerInner(msgExt);
+            //进行存储
             PutMessageResult putMessageResult = this.getBrokerController().getMessageStore().putMessage(brokerInner);
+            //存储成功 日志输出
             if (putMessageResult != null && putMessageResult.getPutMessageStatus() == PutMessageStatus.PUT_OK) {
                 log.info("Put checked-too-many-time half message to TRANS_CHECK_MAXTIME_TOPIC OK. Restored in queueOffset={}, " +
                     "commitLogOffset={}, real topic={}", msgExt.getQueueOffset(), msgExt.getCommitLogOffset(), msgExt.getUserProperty(MessageConst.PROPERTY_REAL_TOPIC));
@@ -59,6 +69,7 @@ public class DefaultTransactionalMessageCheckListener extends AbstractTransactio
     }
 
     private MessageExtBrokerInner toMessageExtBrokerInner(MessageExt msgExt) {
+        //创建 事务检查最大的次数(RMQ_SYS_TRANS_CHECK_MAX_TIME_TOPIC) 的 topic 配置
         TopicConfig topicConfig = this.getBrokerController().getTopicConfigManager().createTopicOfTranCheckMaxTime(TCMT_QUEUE_NUMS, PermName.PERM_READ | PermName.PERM_WRITE);
         int queueId = ThreadLocalRandom.current().nextInt(99999999) % TCMT_QUEUE_NUMS;
         MessageExtBrokerInner inner = new MessageExtBrokerInner();

@@ -21,6 +21,9 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+/**
+ * 为请求添加 zoneName 和 zoneMode
+ */
 public class DynamicalExtFieldRPCHook implements RPCHook {
 
     @Override

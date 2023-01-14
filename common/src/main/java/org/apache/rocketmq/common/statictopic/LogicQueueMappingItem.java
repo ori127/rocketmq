@@ -23,9 +23,18 @@ import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 public class LogicQueueMappingItem extends RemotingSerializable {
 
     private int gen; // immutable
+    /**
+     * 队列id
+     */
     private int queueId; //, immutable
+    /**
+     * broker 名称
+     */
     private String bname; //important, immutable
     private long logicOffset; // the start of the logic offset, important, can be changed by command only once
+    /**
+     * 开始的偏移量
+     */
     private long startOffset; // the start of the physical offset, should always be 0, immutable
     private long endOffset = -1; // the end of the physical offset, excluded, revered -1, mutable
     private long timeOfStart = -1; // mutable, reserved

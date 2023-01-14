@@ -18,7 +18,10 @@ package org.apache.rocketmq.common.namesrv;
 
 
 public interface TopAddressing {
-
+    /**
+     * 获取 nameServer 地址
+     * @return
+     */
     String fetchNSAddr();
 
     void registerChangeCallBack(NameServerUpdateCallback changeCallBack);

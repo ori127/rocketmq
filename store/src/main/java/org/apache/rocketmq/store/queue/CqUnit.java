@@ -22,7 +22,13 @@ import org.apache.rocketmq.store.ConsumeQueueExt;
 import java.nio.ByteBuffer;
 
 public class CqUnit {
+    /**
+     * 队列的偏移量
+     */
     private final long queueOffset;
+    /**
+     * 大小
+     */
     private final int size;
     private final long pos;
     private final short batchNum;

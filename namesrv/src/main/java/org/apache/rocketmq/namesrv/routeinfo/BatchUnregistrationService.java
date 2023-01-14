@@ -33,7 +33,13 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
  * process.
  */
 public class BatchUnregistrationService extends ServiceThread {
+    /**
+     * 路由信息管理
+     */
     private final RouteInfoManager routeInfoManager;
+    /**
+     * 取消注册队列
+     */
     private BlockingQueue<UnRegisterBrokerRequestHeader> unregistrationQueue;
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
@@ -43,6 +49,7 @@ public class BatchUnregistrationService extends ServiceThread {
     }
 
     /**
+     * 提交取消注册请求
      * Submits an unregister request to this queue.
      *
      * @param unRegisterRequest the request to submit
@@ -61,6 +68,7 @@ public class BatchUnregistrationService extends ServiceThread {
     public void run() {
         while (!this.isStopped()) {
             try {
+                //先从阻塞队列当中获取 防止 drainTo 空转 获取队列当中所有 取消注册请求
                 final UnRegisterBrokerRequestHeader request = unregistrationQueue.take();
                 Set<UnRegisterBrokerRequestHeader> unregistrationRequests = new HashSet<>();
                 unregistrationQueue.drainTo(unregistrationRequests);

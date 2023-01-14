@@ -17,6 +17,9 @@
 
 package org.apache.rocketmq.common.protocol.body;
 
+/**
+ * broker 状态
+ */
 public class BrokerStatsItem {
     private long sum;
     private double tps;

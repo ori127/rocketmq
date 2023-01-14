@@ -20,7 +20,13 @@ package org.apache.rocketmq.common.subscription;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.google.common.base.MoreObjects;
 
+/**
+ * 组的重试策略
+ */
 public class GroupRetryPolicy {
+    /**
+     * 默认采用 CustomizedRetryPolicy
+     */
     private final static RetryPolicy DEFAULT_RETRY_POLICY = new CustomizedRetryPolicy();
     private GroupRetryPolicyType type = GroupRetryPolicyType.CUSTOMIZED;
     private ExponentialRetryPolicy exponentialRetryPolicy;
@@ -50,6 +56,10 @@ public class GroupRetryPolicy {
         this.customizedRetryPolicy = customizedRetryPolicy;
     }
 
+    /**
+     * 如果不存在 exponentialRetryPolicy 或者 customizedRetryPolicy 则 采用 DEFAULT_RETRY_POLICY CustomizedRetryPolicy
+     * @return
+     */
     @JSONField(serialize = false, deserialize = false)
     public RetryPolicy getRetryPolicy() {
         if (GroupRetryPolicyType.EXPONENTIAL.equals(type)) {

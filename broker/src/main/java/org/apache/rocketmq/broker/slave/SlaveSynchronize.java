@@ -37,6 +37,9 @@ import org.apache.rocketmq.store.timer.TimerMetrics;
 public class SlaveSynchronize {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
+    /**
+     * 主地址
+     */
     private volatile String masterAddr = null;
 
     public SlaveSynchronize(BrokerController brokerController) {

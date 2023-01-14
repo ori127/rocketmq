@@ -33,6 +33,9 @@ import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+/**
+ * 处理获取路由信息请求的响应 过滤出对应的 zone 下面的路由信息
+ */
 public class ZoneRouteRPCHook implements RPCHook {
 
     @Override
@@ -48,39 +51,56 @@ public class ZoneRouteRPCHook implements RPCHook {
         if (response == null || response.getBody() == null || ResponseCode.SUCCESS != response.getCode()) {
             return;
         }
+        //从请求当中获取 zoneMode
         boolean zoneMode = Boolean.valueOf(request.getExtFields().get(MixAll.ZONE_MODE));
         if (!zoneMode) {
             return;
         }
+        //从请求当中获取 ZONE_NAME
         String zoneName = request.getExtFields().get(MixAll.ZONE_NAME);
         if (StringUtils.isBlank(zoneName)) {
             return;
         }
+        //解码成 TopicRouteData
         TopicRouteData topicRouteData = RemotingSerializable.decode(response.getBody(), TopicRouteData.class);
 
         response.setBody(filterByZoneName(topicRouteData, zoneName).encode());
     }
-    
+
+    /**
+     * 过滤出对应的 zone 下面的路由信息
+     * @param topicRouteData
+     * @param zoneName
+     * @return
+     */
     private TopicRouteData filterByZoneName(TopicRouteData topicRouteData, String zoneName) {
+        //记录没有主的 broker 和  zoneName 下的 broker 要被保留的
         List<BrokerData> brokerDataReserved = new ArrayList<>();
+        //记录存在 主 broker 或者 不是  zoneName 下的 broker 要被移除
         Map<String, BrokerData> brokerDataRemoved = new HashMap<>();
+        //遍历 BrokerData
         for (BrokerData brokerData : topicRouteData.getBrokerDatas()) {
             //master down, consume from slave. break nearby route rule.
+            //FIXME:: 没有主broker 是为干啥
+            //没有 主broker 主 broker 已经宕机 则设置 zoneName 下的 broker
             if (brokerData.getBrokerAddrs().get(MixAll.MASTER_ID) == null
                 || StringUtils.equalsIgnoreCase(brokerData.getZoneName(), zoneName)) {
                 brokerDataReserved.add(brokerData);
             } else {
+                //存在 主 broker 或者 不是  zoneName 下的 broker
                 brokerDataRemoved.put(brokerData.getBrokerName(), brokerData);
             }
         }
         topicRouteData.setBrokerDatas(brokerDataReserved);
-
+        //需要被保留的QueueData
         List<QueueData> queueDataReserved = new ArrayList<>();
+        //遍历队列  QueueData  记录没有在 被 移除broker 下的 队列
         for (QueueData queueData : topicRouteData.getQueueDatas()) {
             if (!brokerDataRemoved.containsKey(queueData.getBrokerName())) {
                 queueDataReserved.add(queueData);
             }
         }
+        //设置队列信息 去掉被移除的 broker   filterServer
         topicRouteData.setQueueDatas(queueDataReserved);
         // remove filter server table by broker address
         if (topicRouteData.getFilterServerTable() != null && !topicRouteData.getFilterServerTable().isEmpty()) {

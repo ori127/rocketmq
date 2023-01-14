@@ -37,12 +37,24 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class ClientMetadata {
-    private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
+    private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
+    /**
+     * key 为  topic ,value 为  TopicRouteData
+     */
     private final ConcurrentMap<String/* Topic */, TopicRouteData> topicRouteTable = new ConcurrentHashMap<String, TopicRouteData>();
+    /**
+     * key 为 topic ,value.key 为 MessageQueue , value.value 为 brokerName
+     */
     private final ConcurrentMap<String/* Topic */, ConcurrentMap<MessageQueue, String/*brokerName*/>> topicEndPointsTable = new ConcurrentHashMap<String, ConcurrentMap<MessageQueue, String>>();
+    /**
+     * key 为 broker名称 , value.key 为 brokerId ,  value.value 为 brokerAddress
+     */
     private final ConcurrentMap<String/* Broker Name */, HashMap<Long/* brokerId */, String/* address */>> brokerAddrTable =
             new ConcurrentHashMap<String, HashMap<Long, String>>();
+    /**
+     * key 为 broker名称 , value.key 为 brokerAddress ,  value.value 为 vserion
+     */
     private final ConcurrentMap<String/* Broker Name */, HashMap<String/* address */, Integer>> brokerVersionTable =
             new ConcurrentHashMap<String, HashMap<String, Integer>>();
 
@@ -51,16 +63,19 @@ public class ClientMetadata {
             || topicRouteData == null) {
             return;
         }
+        //从 topicRouteTable 获取 TopicRouteData 就返回
         TopicRouteData old = this.topicRouteTable.get(topic);
         if (!topicRouteData.topicRouteDataChanged(old)) {
             return ;
         }
         {
+            //将 broker 节点 添加 到 brokerAddrTable  brokerName => (brokerId => brokerAddress) 进行映射
             for (BrokerData bd : topicRouteData.getBrokerDatas()) {
                 this.brokerAddrTable.put(bd.getBrokerName(), bd.getBrokerAddrs());
             }
         }
         {
+            //将路由信息转换成  MessageQueue => brokerName 添加到 topicEndPointsTable 进行映射
             ConcurrentMap<MessageQueue, String> mqEndPoints = topicRouteData2EndpointsForStaticTopic(topic, topicRouteData);
             if (mqEndPoints != null
                     && !mqEndPoints.isEmpty()) {
@@ -69,6 +84,11 @@ public class ClientMetadata {
         }
     }
 
+    /**
+     * 根据 MessageQueue 的 topic 获取 该 topic MessageQueue=> brokerName 然后再 获取该 brokerName
+     * @param mq
+     * @return
+     */
     public String getBrokerNameFromMessageQueue(final MessageQueue mq) {
         if (topicEndPointsTable.get(mq.getTopic()) != null
                 && !topicEndPointsTable.get(mq.getTopic()).isEmpty()) {
@@ -77,16 +97,26 @@ public class ClientMetadata {
         return mq.getBrokerName();
     }
 
+    /**
+     * 将集群的 brokerName 和 brokerId 和 brokerAddress 添加到 brokerAddrTable
+     * @param clusterInfo
+     */
     public void refreshClusterInfo(ClusterInfo clusterInfo) {
         if (clusterInfo == null
             || clusterInfo.getBrokerAddrTable() == null) {
             return;
         }
+        //将集群的 brokerName 和 brokerId 和 brokerAddress 添加到 brokerAddrTable
         for (Map.Entry<String, BrokerData> entry : clusterInfo.getBrokerAddrTable().entrySet()) {
             brokerAddrTable.put(entry.getKey(), entry.getValue().getBrokerAddrs());
         }
     }
 
+    /**
+     * 获取该 broker 的 主 broker 的 地址
+     * @param brokerName
+     * @return
+     */
     public String findMasterBrokerAddr(String brokerName) {
         if (!brokerAddrTable.containsKey(brokerName)) {
             return null;
@@ -98,14 +128,22 @@ public class ClientMetadata {
         return brokerAddrTable;
     }
 
+    /**
+     * TODO 暂时看不懂在做什么,为了干什么
+     * @param topic
+     * @param route
+     * @return key 为 MessageQueue, value 为 borkName
+     */
     public static ConcurrentMap<MessageQueue, String> topicRouteData2EndpointsForStaticTopic(final String topic, final TopicRouteData route) {
         if (route.getTopicQueueMappingByBroker() == null
                 || route.getTopicQueueMappingByBroker().isEmpty()) {
             return new ConcurrentHashMap<MessageQueue, String>();
         }
+        //key 为MessageQueue , value 为 brokerName;
         ConcurrentMap<MessageQueue, String> mqEndPointsOfBroker = new ConcurrentHashMap<MessageQueue, String>();
-
+        // key 为 score ,value.key 为 brokerName ,value.value 为 TopicQueueMappingInfo FIXME::这 score是干什么
         Map<String, Map<String, TopicQueueMappingInfo>> mappingInfosByScope = new HashMap<String, Map<String, TopicQueueMappingInfo>>();
+        //对  TopicQueueMappingInfo 进行 score 分组
         for (Map.Entry<String, TopicQueueMappingInfo> entry : route.getTopicQueueMappingByBroker().entrySet()) {
             TopicQueueMappingInfo info = entry.getValue();
             String scope = info.getScope();
@@ -116,28 +154,35 @@ public class ClientMetadata {
                 mappingInfosByScope.get(scope).put(entry.getKey(), entry.getValue());
             }
         }
-
+        //遍历mappingInfosByScope
         for (Map.Entry<String, Map<String, TopicQueueMappingInfo>> mapEntry : mappingInfosByScope.entrySet()) {
             String scope = mapEntry.getKey();
+            //key 为 brokerName ,value 为 TopicQueueMappingInfo
             Map<String, TopicQueueMappingInfo> topicQueueMappingInfoMap =  mapEntry.getValue();
+            //key 为 MessageQueue ,value 为 TopicQueueMappingInfo
             ConcurrentMap<MessageQueue, TopicQueueMappingInfo> mqEndPoints = new ConcurrentHashMap<MessageQueue, TopicQueueMappingInfo>();
             List<Map.Entry<String, TopicQueueMappingInfo>> mappingInfos = new ArrayList<Map.Entry<String, TopicQueueMappingInfo>>(topicQueueMappingInfoMap.entrySet());
+            //TODO:: topicQueueMappingInfoMap 根据 epoch 排序
             Collections.sort(mappingInfos, new Comparator<Map.Entry<String, TopicQueueMappingInfo>>() {
                 @Override
                 public int compare(Map.Entry<String, TopicQueueMappingInfo> o1, Map.Entry<String, TopicQueueMappingInfo> o2) {
                     return  (int) (o2.getValue().getEpoch() - o1.getValue().getEpoch());
                 }
             });
+            //最大 的队列 数量
             int maxTotalNums = 0;
             long maxTotalNumOfEpoch = -1;
             for (Map.Entry<String, TopicQueueMappingInfo> entry : mappingInfos) {
                 TopicQueueMappingInfo info = entry.getValue();
+                //记录队列当中 最大 的数量
                 if (info.getEpoch() >= maxTotalNumOfEpoch && info.getTotalQueues() > maxTotalNums) {
                     maxTotalNums = info.getTotalQueues();
                 }
                 for (Map.Entry<Integer, Integer> idEntry : entry.getValue().getCurrIdMap().entrySet()) {
                     int globalId = idEntry.getKey();
+                    //生成 MessageQueue信息 FIXME:: scope 添加__syslo__ 前缀 ?
                     MessageQueue mq = new MessageQueue(topic, TopicQueueMappingUtils.getMockBrokerName(info.getScope()), globalId);
+                    //生成 MessageQueue=> TopicQueueMappingInfo 的映射
                     TopicQueueMappingInfo oldInfo = mqEndPoints.get(mq);
                     if (oldInfo == null ||  oldInfo.getEpoch() <= info.getEpoch()) {
                         mqEndPoints.put(mq, info);

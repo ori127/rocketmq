@@ -19,6 +19,10 @@ package org.apache.rocketmq.common.compression;
 
 import java.io.IOException;
 
+/**
+ * TODO:: 这几类压缩方式的有缺点
+ * 压缩接口 由不同的压缩类实现
+ */
 public interface Compressor {
 
     /**

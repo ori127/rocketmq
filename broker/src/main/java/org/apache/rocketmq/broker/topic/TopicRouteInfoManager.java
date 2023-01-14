@@ -46,19 +46,32 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class TopicRouteInfoManager {
-
     private static final long GET_TOPIC_ROUTE_TIMEOUT = 3000L;
     private static final long LOCK_TIMEOUT_MILLIS = 3000L;
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
 
     private final Lock lockNamesrv = new ReentrantLock();
+    /**
+     * key 为 topic ,value 为 TopicRouteData
+     */
+
     private final ConcurrentMap<String/* Topic */, TopicRouteData> topicRouteTable = new ConcurrentHashMap<>();
+    /**
+     * key 为 Broker Name,value.key  为 brokerId , value.value 为 brokerAddress
+     */
     private final ConcurrentMap<String/* Broker Name */, HashMap<Long/* brokerId */, String/* address */>> brokerAddrTable =
         new ConcurrentHashMap<>();
+    /**
+     * key 为 topic, value 为 TopicPublishInfo
+     */
     private final ConcurrentMap<String/* topic */, TopicPublishInfo> topicPublishInfoTable = new ConcurrentHashMap<>();
-
+    /**
+     * key 为 topic,value 为 MessageQueue 集合
+     */
     private final ConcurrentHashMap<String, Set<MessageQueue>> topicSubscribeInfoTable = new ConcurrentHashMap<>();
-
+    /**
+     * 单线用来从NameServer 获取路由信息
+     */
     private ScheduledExecutorService scheduledExecutorService;
     private BrokerController brokerController;
 
@@ -100,13 +113,14 @@ public class TopicRouteInfoManager {
         try {
             if (this.lockNamesrv.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
+                    //从NameServer 更新路由新
                     final TopicRouteData topicRouteData = this.brokerController.getBrokerOuterAPI()
                         .getTopicRouteInfoFromNameServer(topic, GET_TOPIC_ROUTE_TIMEOUT);
                     if (null == topicRouteData) {
                         log.warn("TopicRouteInfoManager: updateTopicRouteInfoFromNameServer, getTopicRouteInfoFromNameServer return null, Topic: {}.", topic);
                         return;
                     }
-
+                    //更新订阅信息
                     if (isNeedUpdateSubscribeInfo) {
                         this.updateSubscribeInfoTable(topicRouteData, topic);
                     }
@@ -133,22 +147,26 @@ public class TopicRouteInfoManager {
     }
 
     private boolean updateTopicRouteTable(String topic, TopicRouteData topicRouteData) {
+        //从topicRouteTable 获取旧的 TopicRouteData 判断是否发生改变
         TopicRouteData old = this.topicRouteTable.get(topic);
         boolean changed = topicRouteData.topicRouteDataChanged(old);
+        //如果 topicRouteData 没有发生 改变
         if (!changed) {
+            //FIXME::判断路由信息是否 改变
             if (!this.isNeedUpdateTopicRouteInfo(topic)) {
                 return false;
             }
         } else {
             log.info("the topic[{}] route info changed, old[{}] ,new[{}]", topic, old, topicRouteData);
         }
-
+        //生成 brokeName => (brokerId => brokerAddress) 映射
         for (BrokerData bd : topicRouteData.getBrokerDatas()) {
             this.brokerAddrTable.put(bd.getBrokerName(), bd.getBrokerAddrs());
         }
-
+        //将路由信息转成
         TopicPublishInfo publishInfo = MQClientInstance.topicRouteData2TopicPublishInfo(topic, topicRouteData);
         publishInfo.setHaveTopicRouterInfo(true);
+        //生成 topic TopicPublishInfo 的映射
         this.updateTopicPublishInfo(topic, publishInfo);
 
         TopicRouteData cloneTopicRouteData = new TopicRouteData(topicRouteData);
@@ -159,11 +177,13 @@ public class TopicRouteInfoManager {
     }
 
     private boolean updateSubscribeInfoTable(TopicRouteData topicRouteData, String topic) {
+        //对topicRouteData 进行 复制 生产 tmp 将 brokerName=> TopicQueueMappingInfo 映射 去掉
         final TopicRouteData tmp = new TopicRouteData(topicRouteData);
         tmp.setTopicQueueMappingByBroker(null);
+        //
         Set<MessageQueue> newSubscribeInfo = MQClientInstance.topicRouteData2TopicSubscribeInfo(topic, tmp);
         Set<MessageQueue> oldSubscribeInfo = topicSubscribeInfoTable.get(topic);
-
+        //判断新的订阅MessageQueue和旧订阅MessageQueue是否相等 不相同则更新订阅信息MessageQueue
         if (Objects.equals(newSubscribeInfo, oldSubscribeInfo)) {
             return false;
         }
@@ -174,6 +194,11 @@ public class TopicRouteInfoManager {
 
     }
 
+    /**
+     * 判断 topic => TopicPublishInfo 的消息 队列是否为空
+     * @param topic
+     * @return
+     */
     private boolean isNeedUpdateTopicRouteInfo(final String topic) {
         final TopicPublishInfo prev = this.topicPublishInfoTable.get(topic);
         return null == prev || !prev.ok();
@@ -253,7 +278,13 @@ public class TopicRouteInfoManager {
 
     }
 
+    /**
+     * 根据 topic 获取 该 消息队列 消息队列不为空 则从 NameServer 更新该 路由信息
+     * @param topic
+     * @return
+     */
     public Set<MessageQueue> getTopicSubscribeInfo(String topic) {
+        //根据 topic 获取 该 消息队列 消息队列不为空 则从 NameServer 更新该 路由信息
         Set<MessageQueue> queues = topicSubscribeInfoTable.get(topic);
         if (null == queues || queues.isEmpty()) {
             this.updateTopicRouteInfoFromNameServer(topic, false, true);

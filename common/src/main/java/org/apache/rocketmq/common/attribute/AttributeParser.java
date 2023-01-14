@@ -34,6 +34,7 @@ public class AttributeParser {
         Map<String, String> attributes = new HashMap<>();
         String arraySeparator = ",";
         String kvSeparator = "=";
+        //先以","分割 然后判断是否 含有等号  如果含有等号 必须 是 "+" 如果不含 等号 必须是 "-"
         String[] kvs = attributesModification.split(arraySeparator);
         for (String kv : kvs) {
             String key;
@@ -59,6 +60,11 @@ public class AttributeParser {
         return attributes;
     }
 
+    /**
+     * 将Map 转成 format: +key1=value1,+key2=value2,-key3,+key4=value4
+     * @param attributes
+     * @return
+     */
     public static String parseToString(Map<String, String> attributes) {
         if (attributes == null || attributes.size() == 0) {
             return "";

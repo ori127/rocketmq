@@ -20,8 +20,17 @@ package org.apache.rocketmq.common.subscription;
 import com.google.common.base.MoreObjects;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 指数级增长 2 pow reconsumeTimes * 5 秒 最大 两个小时
+ */
 public class ExponentialRetryPolicy implements RetryPolicy {
+    /**
+     * 5秒 每次 间隔5秒
+     */
     private long initial = TimeUnit.SECONDS.toMillis(5);
+    /**
+     * 最大两个小时
+     */
     private long max = TimeUnit.HOURS.toMillis(2);
     private long multiplier = 2;
 
@@ -67,6 +76,11 @@ public class ExponentialRetryPolicy implements RetryPolicy {
             .toString();
     }
 
+    /**
+     * 下次延迟时间
+     * @param reconsumeTimes Message reconsumeTimes
+     * @return
+     */
     @Override
     public long nextDelayDuration(int reconsumeTimes) {
         if (reconsumeTimes < 0) {
@@ -75,6 +89,7 @@ public class ExponentialRetryPolicy implements RetryPolicy {
         if (reconsumeTimes > 32) {
             reconsumeTimes = 32;
         }
+        //指数级增长 2 pow reconsumeTimes * 5 秒
         return Math.min(max, initial * (long) Math.pow(multiplier, reconsumeTimes));
     }
 }

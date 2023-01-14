@@ -60,7 +60,7 @@ public class AllocateMachineRoomNearby extends AbstractAllocateMessageQueueStrat
         if (!check(consumerGroup, currentCID, mqAll, cidAll)) {
             return result;
         }
-
+        //MessageQueue 根据机房分组
         //group mq by machine room
         Map<String/*machine room */, List<MessageQueue>> mr2Mq = new TreeMap<String, List<MessageQueue>>();
         for (MessageQueue mq : mqAll) {
@@ -76,6 +76,7 @@ public class AllocateMachineRoomNearby extends AbstractAllocateMessageQueueStrat
         }
 
         //group consumer by machine room
+        //clientId 根据机房分组
         Map<String/*machine room */, List<String/*clientId*/>> mr2c = new TreeMap<String, List<String>>();
         for (String cid : cidAll) {
             String consumerMachineRoom = machineRoomResolver.consumerDeployIn(cid);
@@ -92,16 +93,22 @@ public class AllocateMachineRoomNearby extends AbstractAllocateMessageQueueStrat
         List<MessageQueue> allocateResults = new ArrayList<MessageQueue>();
 
         //1.allocate the mq that deploy in the same machine room with the current consumer
+        //查找客户端的机房
         String currentMachineRoom = machineRoomResolver.consumerDeployIn(currentCID);
+        //查找当前机房的MessageQueue
+        //查找当前机房的客户端列表
         List<MessageQueue> mqInThisMachineRoom = mr2Mq.remove(currentMachineRoom);
         List<String> consumerInThisMachineRoom = mr2c.get(currentMachineRoom);
+        //然后按机房 当前客户端 和 机房的内的客户端逻辑进行分配
         if (mqInThisMachineRoom != null && !mqInThisMachineRoom.isEmpty()) {
             allocateResults.addAll(allocateMessageQueueStrategy.allocate(consumerGroup, currentCID, mqInThisMachineRoom, consumerInThisMachineRoom));
         }
 
         //2.allocate the rest mq to each machine room if there are no consumer alive in that machine room
         for (Entry<String, List<MessageQueue>> machineRoomEntry : mr2Mq.entrySet()) {
-            if (!mr2c.containsKey(machineRoomEntry.getKey())) { // no alive consumer in the corresponding machine room, so all consumers share these queues
+            if (!mr2c.containsKey(machineRoomEntry.getKey())) {
+                //如果该 MessageQueue 的机房没有对应 客户端 则所有消费组共享这个 MessageQueue
+                // no alive consumer in the corresponding machine room, so all consumers share these queues
                 allocateResults.addAll(allocateMessageQueueStrategy.allocate(consumerGroup, currentCID, machineRoomEntry.getValue(), cidAll));
             }
         }

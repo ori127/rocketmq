@@ -37,6 +37,7 @@ public class Validators {
     public static final int TOPIC_MAX_LENGTH = 127;
 
     /**
+     * 检查 组名
      * Validate group
      */
     public static void checkGroup(String group) throws MQClientException {
@@ -56,6 +57,12 @@ public class Validators {
         }
     }
 
+    /**
+     * 检查消息 发送消息大小超过生产者的大小
+     * @param msg
+     * @param defaultMQProducer
+     * @throws MQClientException
+     */
     public static void checkMessage(Message msg, DefaultMQProducer defaultMQProducer) throws MQClientException {
         if (null == msg) {
             throw new MQClientException(ResponseCode.MESSAGE_ILLEGAL, "the message is null");

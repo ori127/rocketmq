@@ -24,7 +24,10 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.protocol.body.ConsumeStatus;
 import org.apache.rocketmq.common.stats.StatsItemSet;
 import org.apache.rocketmq.common.stats.StatsSnapshot;
-
+/**
+ * TODO::统计部分以后再看吧
+ * 消费状态管理
+ */
 public class ConsumerStatsManager {
     private static final InternalLogger log = ClientLogger.getLog();
 
@@ -34,10 +37,25 @@ public class ConsumerStatsManager {
     private static final String TOPIC_AND_GROUP_PULL_TPS = "PULL_TPS";
     private static final String TOPIC_AND_GROUP_PULL_RT = "PULL_RT";
 
+    /**
+     * 消费成功tps
+     */
     private final StatsItemSet topicAndGroupConsumeOKTPS;
+    /**
+     * 消费成功的响应时间
+     */
     private final StatsItemSet topicAndGroupConsumeRT;
+    /**
+     * 消费失败的tps
+     */
     private final StatsItemSet topicAndGroupConsumeFailedTPS;
+    /**
+     * 拉取消息的tps
+     */
     private final StatsItemSet topicAndGroupPullTPS;
+    /**
+     * 拉取消息的响应时间
+     */
     private final StatsItemSet topicAndGroupPullRT;
 
     public ConsumerStatsManager(final ScheduledExecutorService scheduledExecutorService) {

@@ -34,32 +34,49 @@ import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.logging.InternalLogger;
-
+/**
+ * 请求实例 映射 表 持有对象
+ */
 public class RequestFutureHolder {
     private static InternalLogger log = ClientLogger.getLog();
+    /**
+     * 单例模式
+     */
     private static final RequestFutureHolder INSTANCE = new RequestFutureHolder();
+    /**
+     * key 为 发送请求请求时 生成的唯一 id
+     */
     private ConcurrentHashMap<String, RequestResponseFuture> requestFutureTable = new ConcurrentHashMap<String, RequestResponseFuture>();
+    /**
+     * 生产者实例 集合
+     */
     private final Set<DefaultMQProducerImpl> producerSet = new HashSet<DefaultMQProducerImpl>();
+    /**
+     * 执行器,未设置则采用单线 用来扫描超时请求的
+     */
     private ScheduledExecutorService scheduledExecutorService = null;
 
     public ConcurrentHashMap<String, RequestResponseFuture> getRequestFutureTable() {
         return requestFutureTable;
     }
 
+    /**
+     * 扫描过期请求,设置请求超时异常 进行回调
+     */
     private void scanExpiredRequest() {
         final List<RequestResponseFuture> rfList = new LinkedList<RequestResponseFuture>();
         Iterator<Map.Entry<String, RequestResponseFuture>> it = requestFutureTable.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, RequestResponseFuture> next = it.next();
             RequestResponseFuture rep = next.getValue();
-
+            //是否超时 如果超时 则进行移除 填了到 已处理列表
             if (rep.isTimeout()) {
                 it.remove();
                 rfList.add(rep);
                 log.warn("remove timeout request, CorrelationId={}" + rep.getCorrelationId());
             }
         }
-
+        //设置请求超时异常 进行回调
         for (RequestResponseFuture rf : rfList) {
             try {
                 Throwable cause = new RequestTimeoutException(ClientErrorCode.REQUEST_TIMEOUT_EXCEPTION, "request timeout, no reply message.");
@@ -71,6 +88,10 @@ public class RequestFutureHolder {
         }
     }
 
+    /**
+     * 启动定时任务 每隔离 1秒 扫描超时请求 进行回调 线程池初始化则采用单线程
+     * @param producer
+     */
     public synchronized void startScheduledTask(DefaultMQProducerImpl producer) {
         this.producerSet.add(producer);
         if (null == scheduledExecutorService) {
@@ -90,6 +111,10 @@ public class RequestFutureHolder {
         }
     }
 
+    /**
+     * 移除生产者 关闭扫描超时请求的线程
+     * @param producer
+     */
     public synchronized void shutdown(DefaultMQProducerImpl producer) {
         this.producerSet.remove(producer);
         if (this.producerSet.size() <= 0 && null != this.scheduledExecutorService) {

@@ -17,6 +17,7 @@
 package org.apache.rocketmq.common.consistenthash;
 
 /**
+ * 表示应该映射到哈希环的节点 getKey
  * Represent a node which should be mapped to a hash ring
  */
 public interface Node {

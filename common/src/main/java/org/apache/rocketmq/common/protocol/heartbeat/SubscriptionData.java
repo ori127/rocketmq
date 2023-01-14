@@ -29,11 +29,29 @@ import java.util.Set;
 public class SubscriptionData implements Comparable<SubscriptionData> {
     public final static String SUB_ALL = "*";
     private boolean classFilterMode = false;
+    /**
+     * 订阅的topic
+     */
     private String topic;
+    /**
+     * 订阅的字符串信息
+     */
     private String subString;
+    /**
+     * tages 集合
+     */
     private Set<String> tagsSet = new HashSet<String>();
+    /**
+     * tage 的 hash code
+     */
     private Set<Integer> codeSet = new HashSet<Integer>();
+    /**
+     * 订阅的版本
+     */
     private long subVersion = System.currentTimeMillis();
+    /**
+     * 订阅的表达式类型 TAG 和 SQL
+     */
     private String expressionType = ExpressionType.TAG;
 
     @JSONField(serialize = false)

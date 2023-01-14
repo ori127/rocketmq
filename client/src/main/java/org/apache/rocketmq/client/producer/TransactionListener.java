@@ -21,6 +21,7 @@ import org.apache.rocketmq.common.message.MessageExt;
 
 public interface TransactionListener {
     /**
+     * 当发送 半事务成功, 将会调用该方法执行本地事务
      * When send transactional prepare(half) message succeed, this method will be invoked to execute local transaction.
      *
      * @param msg Half(prepare) message
@@ -30,6 +31,7 @@ public interface TransactionListener {
     LocalTransactionState executeLocalTransaction(final Message msg, final Object arg);
 
     /**
+     * 当前没有响应 半事务时, broker 会发送送消息 来检查 事务状态
      * When no response to prepare(half) message. broker will send check message to check the transaction status, and this
      * method will be invoked to get local transaction status.
      *

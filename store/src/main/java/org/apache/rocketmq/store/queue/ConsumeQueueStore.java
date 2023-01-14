@@ -50,12 +50,24 @@ public class ConsumeQueueStore {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     protected final DefaultMessageStore messageStore;
+    /**
+     * 消息存储配置
+     */
     protected final MessageStoreConfig messageStoreConfig;
+    /**
+     *  topic - queueId 的偏移量
+     */
     protected final QueueOffsetAssigner queueOffsetAssigner = new QueueOffsetAssigner();
+    /**
+     * key 为 topic , value.key 为消息 队列的 id , value 为 ConsumeQueueInterface
+     */
     protected final ConcurrentMap<String/* topic */, ConcurrentMap<Integer/* queueId */, ConsumeQueueInterface>> consumeQueueTable;
 
     // Should be careful, do not change the topic config
     // TopicConfigManager is more suitable here.
+    /**
+     * key 为 topic , value 为  TopicConfig
+     */
     private ConcurrentMap<String, TopicConfig> topicConfigTable;
 
     public ConsumeQueueStore(DefaultMessageStore messageStore, MessageStoreConfig messageStoreConfig) {
@@ -64,6 +76,10 @@ public class ConsumeQueueStore {
         this.consumeQueueTable = new ConcurrentHashMap<>(32);
     }
 
+    /**
+     * topic  和 对应的 TopicConfig 的 topic配置表
+     * @param topicConfigTable
+     */
     public void setTopicConfigTable(ConcurrentMap<String, TopicConfig> topicConfigTable) {
         this.topicConfigTable = topicConfigTable;
     }
@@ -245,12 +261,26 @@ public class ConsumeQueueStore {
         return fileQueueLifeCycle.isFirstFileExist();
     }
 
+    /**
+     * 寻找 不存在则 创建  topic 消息队列 的 ConsumeQueueInterface 映射
+     * @param topic
+     * @param queueId
+     * @return
+     */
     public ConsumeQueueInterface findOrCreateConsumeQueue(String topic, int queueId) {
         return doFindOrCreateConsumeQueue(topic, queueId);
     }
 
+    /**
+     * 寻找 不存在则 创建  topic 消息队列 的 ConsumeQueueInterface 映射
+     * @param topic
+     * @param queueId
+     * @return
+     */
     private ConsumeQueueInterface doFindOrCreateConsumeQueue(String topic, int queueId) {
+        //从 consumeQueueTable 获取 该 topic 的 queueId => ConsumeQueueInterface 映射
         ConcurrentMap<Integer, ConsumeQueueInterface> map = consumeQueueTable.get(topic);
+        //如果不存在  topic 的 queueId => ConsumeQueueInterface 映射 就新建映射
         if (null == map) {
             ConcurrentMap<Integer, ConsumeQueueInterface> newMap = new ConcurrentHashMap<>(128);
             ConcurrentMap<Integer, ConsumeQueueInterface> oldMap = consumeQueueTable.putIfAbsent(topic, newMap);
@@ -260,17 +290,20 @@ public class ConsumeQueueStore {
                 map = newMap;
             }
         }
-
+        //获取该队列的 ConsumeQueueInterface
         ConsumeQueueInterface logic = map.get(queueId);
         if (logic != null) {
             return logic;
         }
-
+        //不存在该 队列的 ConsumeQueueInterface
         ConsumeQueueInterface newLogic;
 
         Optional<TopicConfig> topicConfig = this.getTopicConfig(topic);
         // TODO maybe the topic has been deleted.
+        //根据 topic 配置 获取 消费队列的类型
         if (Objects.equals(CQType.BatchCQ, QueueTypeUtils.getCQType(topicConfig))) {
+            //如果是批量消费 队列 则 BatchConsumeQueue
+            //存储路径 为  "/store/batchconsumequeue";
             newLogic = new BatchConsumeQueue(
                 topic,
                 queueId,
@@ -278,6 +311,8 @@ public class ConsumeQueueStore {
                 this.messageStoreConfig.getMapperFileSizeBatchConsumeQueue(),
                 this.messageStore);
         } else {
+            //如果是简单消费 队列 则 ConsumeQueue
+            //存储路径 为  "/store/consumequeue";
             newLogic = new ConsumeQueue(
                 topic,
                 queueId,
@@ -285,7 +320,7 @@ public class ConsumeQueueStore {
                 this.messageStoreConfig.getMappedFileSizeConsumeQueue(),
                 this.messageStore);
         }
-
+        //进行映射
         ConsumeQueueInterface oldLogic = map.putIfAbsent(queueId, newLogic);
         if (oldLogic != null) {
             logic = oldLogic;
@@ -296,10 +331,16 @@ public class ConsumeQueueStore {
         return logic;
     }
 
+    /**
+     * 获取 简单消费队列 topic-queueId 偏移量
+     */
     public Long getMaxOffset(String topic, int queueId) {
         return this.queueOffsetAssigner.currentQueueOffset(topic + "-" + queueId);
     }
-
+    /**
+     * 设置 简单消费队列 topic-queueId 偏移量
+     * @param topicQueueTable
+     */
     public void setTopicQueueTable(ConcurrentMap<String, Long> topicQueueTable) {
         this.queueOffsetAssigner.setTopicQueueTable(topicQueueTable);
     }
@@ -463,6 +504,11 @@ public class ConsumeQueueStore {
         }
     }
 
+    /**
+     * 获取该 topic 的配置
+     * @param topic
+     * @return
+     */
     public Optional<TopicConfig> getTopicConfig(String topic) {
         if (this.topicConfigTable == null) {
             return Optional.empty();
@@ -471,6 +517,10 @@ public class ConsumeQueueStore {
         return Optional.ofNullable(this.topicConfigTable.get(topic));
     }
 
+    /**
+     * 获取总大小
+     * @return
+     */
     public long getTotalSize() {
         long totalSize = 0;
         for (ConcurrentMap<Integer, ConsumeQueueInterface> maps : this.consumeQueueTable.values()) {

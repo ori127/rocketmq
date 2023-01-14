@@ -19,6 +19,7 @@ package org.apache.rocketmq.client.producer;
 import org.apache.rocketmq.common.message.MessageExt;
 
 /**
+ * 用来回查本地事务状态监听
  * @deprecated This interface will be removed in the version 5.0.0, interface {@link TransactionListener} is recommended.
  */
 @Deprecated

@@ -29,11 +29,17 @@ public class TraceContext implements Comparable<TraceContext> {
     private long timeStamp = System.currentTimeMillis();
     private String regionId = "";
     private String regionName = "";
+    /**
+     * 组名称
+     */
     private String groupName = "";
     private int costTime = 0;
     private boolean isSuccess = true;
     private String requestId = MessageClientIDSetter.createUniqID();
     private int contextCode = 0;
+    /**
+     * 跟踪消息 的 trace 集合
+     */
     private List<TraceBean> traceBeans;
 
     public int getContextCode() {

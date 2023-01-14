@@ -32,12 +32,24 @@ public class CreateTopicRequestHeader implements CommandCustomHeader {
     private String topic;
     @CFNotNull
     private String defaultTopic;
+    /**
+     * 读队列数量
+     */
     @CFNotNull
     private Integer readQueueNums;
+    /**
+     * 写队列数量
+     */
     @CFNotNull
     private Integer writeQueueNums;
+    /**
+     * 读写权限
+     */
     @CFNotNull
     private Integer perm;
+    /**
+     * TopicFilterType topic 过滤类型
+     */
     @CFNotNull
     private String topicFilterType;
     private Integer topicSysFlag;

@@ -57,27 +57,63 @@ import org.apache.rocketmq.store.queue.ConsumeQueueInterface;
 import org.apache.rocketmq.store.queue.CqUnit;
 import org.apache.rocketmq.store.queue.ReferredIterator;
 
+/**
+ * 消息调度
+ */
 public class ScheduleMessageService extends ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
-
+    /**
+     * 第一延迟时间
+     */
     private static final long FIRST_DELAY_TIME = 1000L;
+    /**
+     * 延迟一段时间
+     */
     private static final long DELAY_FOR_A_WHILE = 100L;
     private static final long DELAY_FOR_A_PERIOD = 10000L;
     private static final long WAIT_FOR_SHUTDOWN = 5000L;
     private static final long DELAY_FOR_A_SLEEP = 10L;
-
+    /**
+     * key  为 延迟 等级 ,  value 为延迟 时间
+     */
     private final ConcurrentMap<Integer /* level */, Long/* delay timeMillis */> delayLevelTable =
         new ConcurrentHashMap<Integer, Long>(32);
-
+    /**
+     * key 为延迟 等级 , value 为 该等级的偏移量
+     */
     private final ConcurrentMap<Integer /* level */, Long/* offset */> offsetTable =
         new ConcurrentHashMap<Integer, Long>(32);
+    /**
+     * 启动状态
+     */
     private final AtomicBoolean started = new AtomicBoolean(false);
+    /**
+     * 分发线程池
+     */
     private ScheduledExecutorService deliverExecutorService;
+    /**
+     * 最大延迟 等级 作为分发 线程池的 核心 线程数量
+     */
     private int maxDelayLevel;
+    /**
+     * 版本号
+     */
     private DataVersion dataVersion = new DataVersion();
+    /**
+     * 是否异步 Deliver
+     */
     private boolean enableAsyncDeliver = false;
+    /**
+     * 如果采用 异步 enableAsyncDeliver
+     */
     private ScheduledExecutorService handleExecutorService;
+    /***
+     * 定时进行 持久化
+     */
     private final ScheduledExecutorService scheduledPersistService;
+    /**
+     * key 为延迟 等级
+     */
     private final Map<Integer /* level */, LinkedBlockingQueue<PutResultProcess>> deliverPendingTable =
         new ConcurrentHashMap<>(32);
     private final BrokerController brokerController;
@@ -88,6 +124,7 @@ public class ScheduleMessageService extends ConfigManager {
         this.enableAsyncDeliver = brokerController.getMessageStoreConfig().isEnableScheduleAsyncDeliver();
         scheduledPersistService = new ScheduledThreadPoolExecutor(1,
             new ThreadFactoryImpl("ScheduleMessageServicePersistThread", true, brokerController.getBrokerConfig()));
+        //持久化
         scheduledPersistService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -100,20 +137,33 @@ public class ScheduleMessageService extends ConfigManager {
         }, 10000, this.brokerController.getMessageStoreConfig().getFlushDelayOffsetInterval(), TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * 消息队列 id 转成 延迟等级 + 1
+     * @param queueId
+     * @return
+     */
     public static int queueId2DelayLevel(final int queueId) {
         return queueId + 1;
     }
 
+    /**
+     * 延迟等级 转成消息队列id  -1
+     * @param delayLevel
+     * @return
+     */
     public static int delayLevel2QueueId(final int delayLevel) {
         return delayLevel - 1;
     }
 
     public void buildRunningStats(HashMap<String, String> stats) {
+        //遍历 offsetTable 延迟等级 的偏移量
         Iterator<Map.Entry<Integer, Long>> it = this.offsetTable.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Integer, Long> next = it.next();
+            //延迟等级转成 消息队列 Id
             int queueId = delayLevel2QueueId(next.getKey());
             long delayOffset = next.getValue();
+            //获取 SCHEDULE_TOPIC_XXXX  topic  消息队列 id 为 queueId 最大偏移量
             long maxOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(TopicValidator.RMQ_SYS_SCHEDULE_TOPIC, queueId);
             String value = String.format("%d,%d", delayOffset, maxOffset);
             String key = String.format("%s_%d", RunningStats.scheduleMessageOffset.name(), next.getKey());
@@ -122,14 +172,23 @@ public class ScheduleMessageService extends ConfigManager {
     }
 
     private void updateOffset(int delayLevel, long offset) {
+        //更新延迟等级的偏移量 如果版本
         this.offsetTable.put(delayLevel, offset);
+        //版本计数为延迟等级偏移量更新步调的倍数 则更新 版本
         if (versionChangeCounter.incrementAndGet() % brokerController.getBrokerConfig().getDelayOffsetUpdateVersionStep() == 0) {
             long stateMachineVersion = brokerController.getMessageStore() != null ? brokerController.getMessageStore().getStateMachineVersion() : 0;
             dataVersion.nextVersion(stateMachineVersion);
         }
     }
 
+    /**
+     * 计算分发时间
+     * @param delayLevel
+     * @param storeTimestamp
+     * @return
+     */
     public long computeDeliverTimestamp(final int delayLevel, final long storeTimestamp) {
+        //根据延迟等级 来获取延迟 时间 + 消息存储 时间 为分发时间
         Long time = this.delayLevelTable.get(delayLevel);
         if (time != null) {
             return time + storeTimestamp;
@@ -141,13 +200,17 @@ public class ScheduleMessageService extends ConfigManager {
     public void start() {
         if (started.compareAndSet(false, true)) {
             this.load();
+            //初始化分发线程池
             this.deliverExecutorService = new ScheduledThreadPoolExecutor(this.maxDelayLevel, new ThreadFactoryImpl("ScheduleMessageTimerThread_"));
+            //异步线程池
             if (this.enableAsyncDeliver) {
                 this.handleExecutorService = new ScheduledThreadPoolExecutor(this.maxDelayLevel, new ThreadFactoryImpl("ScheduleMessageExecutorHandleThread_"));
             }
+            //遍历 delayLevelTable  延迟等级 对应 的 延迟时间表
             for (Map.Entry<Integer, Long> entry : this.delayLevelTable.entrySet()) {
                 Integer level = entry.getKey();
                 Long timeDelay = entry.getValue();
+                //获取该延迟的等级的偏移量
                 Long offset = this.offsetTable.get(level);
                 if (null == offset) {
                     offset = 0L;
@@ -160,7 +223,7 @@ public class ScheduleMessageService extends ConfigManager {
                     this.deliverExecutorService.schedule(new DeliverDelayedMessageTimerTask(level, offset), FIRST_DELAY_TIME, TimeUnit.MILLISECONDS);
                 }
             }
-
+            //进行持久化
             this.deliverExecutorService.scheduleAtFixedRate(new Runnable() {
 
                 @Override
@@ -241,7 +304,9 @@ public class ScheduleMessageService extends ConfigManager {
 
     public boolean correctDelayOffset() {
         try {
+            //遍历 delayLevelTable
             for (int delayLevel : delayLevelTable.keySet()) {
+                //获取 SCHEDULE_TOPIC_XXXX 对应队列的 消费消息队列 接口
                 ConsumeQueueInterface cq =
                     brokerController.getMessageStore().getQueueStore().findOrCreateConsumeQueue(TopicValidator.RMQ_SYS_SCHEDULE_TOPIC,
                         delayLevel2QueueId(delayLevel));
@@ -249,20 +314,24 @@ public class ScheduleMessageService extends ConfigManager {
                 if (currentDelayOffset == null || cq == null) {
                     continue;
                 }
+                //当前 延迟等级的 偏移量
                 long correctDelayOffset = currentDelayOffset;
+                //获取 该消费队列的 最小偏移量 和 最大偏移量
                 long cqMinOffset = cq.getMinOffsetInQueue();
                 long cqMaxOffset = cq.getMaxOffsetInQueue();
+                //小于该队列最小偏移量 说 延迟等级偏移量无效
                 if (currentDelayOffset < cqMinOffset) {
                     correctDelayOffset = cqMinOffset;
                     log.error("schedule CQ offset invalid. offset={}, cqMinOffset={}, cqMaxOffset={}, queueId={}",
                         currentDelayOffset, cqMinOffset, cqMaxOffset, cq.getQueueId());
                 }
-
+                //大于该队列最大偏移量 说 延迟等级偏移量无效
                 if (currentDelayOffset > cqMaxOffset) {
                     correctDelayOffset = cqMaxOffset;
                     log.error("schedule CQ offset invalid. offset={}, cqMinOffset={}, cqMaxOffset={}, queueId={}",
                         currentDelayOffset, cqMinOffset, cqMaxOffset, cq.getQueueId());
                 }
+                //更新延迟等级的偏移量
                 if (correctDelayOffset != currentDelayOffset) {
                     log.error("correct delay offset [ delayLevel {} ] from {} to {}", delayLevel, currentDelayOffset, correctDelayOffset);
                     offsetTable.put(delayLevel, correctDelayOffset);
@@ -281,6 +350,10 @@ public class ScheduleMessageService extends ConfigManager {
             .getStorePathRootDir());
     }
 
+    /**
+     * load 时间 加载配置文件 根据文件获取 offsetTable
+     * @param jsonString
+     */
     @Override
     public void decode(String jsonString) {
         if (jsonString != null) {
@@ -304,28 +377,39 @@ public class ScheduleMessageService extends ConfigManager {
         return delayOffsetSerializeWrapper.toJson(prettyFormat);
     }
 
+    /**
+     * 生成 delayLevelTable 延迟等级 对应 延迟时间 映射
+     * @return
+     */
     public boolean parseDelayLevel() {
         HashMap<String, Long> timeUnitTable = new HashMap<String, Long>();
         timeUnitTable.put("s", 1000L);
         timeUnitTable.put("m", 1000L * 60);
         timeUnitTable.put("h", 1000L * 60 * 60);
         timeUnitTable.put("d", 1000L * 60 * 60 * 24);
-
+        // "1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h"
         String levelString = this.brokerController.getMessageStoreConfig().getMessageDelayLevel();
         try {
             String[] levelArray = levelString.split(" ");
             for (int i = 0; i < levelArray.length; i++) {
                 String value = levelArray[i];
+                //单位
                 String ch = value.substring(value.length() - 1);
+                //获取单位的 时间 毫秒
                 Long tu = timeUnitTable.get(ch);
 
                 int level = i + 1;
+                //记录最大的延迟等级
                 if (level > this.maxDelayLevel) {
                     this.maxDelayLevel = level;
                 }
+                //数量
                 long num = Long.parseLong(value.substring(0, value.length() - 1));
+                //计算延迟时间
                 long delayTimeMillis = tu * num;
+                //进行延迟等级的映射
                 this.delayLevelTable.put(level, delayTimeMillis);
+                //异步分发初始  deliverPendingTable 表
                 if (this.enableAsyncDeliver) {
                     this.deliverPendingTable.put(level, new LinkedBlockingQueue<>());
                 }
@@ -371,6 +455,11 @@ public class ScheduleMessageService extends ConfigManager {
         return msgInner;
     }
 
+    /**
+     * 根据时间计算计算 delayLevel
+     * @param timeMillis
+     * @return
+     */
     public int computeDelayLevel(long timeMillis) {
         long intervalMillis = timeMillis - System.currentTimeMillis();
         List<Map.Entry<Integer, Long>> sortedLevels = delayLevelTable.entrySet().stream().sorted(Comparator.comparingLong(Map.Entry::getValue)).collect(Collectors.toList());
@@ -383,7 +472,13 @@ public class ScheduleMessageService extends ConfigManager {
     }
 
     class DeliverDelayedMessageTimerTask implements Runnable {
+        /**
+         * 延迟等级
+         */
         private final int delayLevel;
+        /**
+         * 偏移量
+         */
         private final long offset;
 
         public DeliverDelayedMessageTimerTask(int delayLevel, long offset) {
@@ -420,6 +515,7 @@ public class ScheduleMessageService extends ConfigManager {
         }
 
         public void executeOnTimeup() {
+            //获取 SCHEDULE_TOPIC_XXXX 对应队列的 消费消息队列 接口
             ConsumeQueueInterface cq =
                 ScheduleMessageService.this.brokerController.getMessageStore().getConsumeQueue(TopicValidator.RMQ_SYS_SCHEDULE_TOPIC,
                     delayLevel2QueueId(delayLevel));
@@ -441,7 +537,7 @@ public class ScheduleMessageService extends ConfigManager {
                 } else {
                     resetOffset = this.offset;
                 }
-
+                //重新进行调度
                 this.scheduleNextTimerTask(resetOffset, DELAY_FOR_A_WHILE);
                 return;
             }
@@ -617,16 +713,33 @@ public class ScheduleMessageService extends ConfigManager {
     }
 
     public class PutResultProcess {
+        /**
+         * topic
+         */
         private String topic;
+        /**
+         * 偏移量
+         */
         private long offset;
         private long physicOffset;
         private int physicSize;
+        /**
+         * 延迟等级
+         */
         private int delayLevel;
         private String msgId;
+        /**
+         * 是否自动重发
+         */
         private boolean autoResend = false;
         private CompletableFuture<PutMessageResult> future;
-
+        /**
+         * 重发计数
+         */
         private volatile int resendCount = 0;
+        /**
+         * 处理状态
+         */
         private volatile ProcessStatus status = ProcessStatus.RUNNING;
 
         public PutResultProcess setTopic(String topic) {
@@ -827,21 +940,25 @@ public class ScheduleMessageService extends ConfigManager {
 
     public enum ProcessStatus {
         /**
+         * 处理中,处理结果还没有返回
          * In process, the processing result has not yet been returned.
          */
         RUNNING,
 
         /**
+         * put 消息成功
          * Put message success.
          */
         SUCCESS,
 
         /**
+         * put 消息 发生异常,若果设置 autoResend 消息将被重新发送
          * Put message exception. When autoResend is true, the message will be resend.
          */
         EXCEPTION,
 
         /**
+         * 跳过 put 消息 ,当消息 不能 上锁 消息会被跳过
          * Skip put message. When the message cannot be looked, the message will be skipped.
          */
         SKIP,

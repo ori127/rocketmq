@@ -44,7 +44,12 @@ public class RebalanceLitePullImpl extends RebalanceImpl {
         super(consumerGroup, messageModel, allocateMessageQueueStrategy, mQClientFactory);
         this.litePullConsumerImpl = litePullConsumerImpl;
     }
-
+    /**
+     * 获取队列监听器 通知 消息队列 发生改变
+     * @param topic
+     * @param mqAll
+     * @param mqDivided
+     */
     @Override
     public void messageQueueChanged(String topic, Set<MessageQueue> mqAll, Set<MessageQueue> mqDivided) {
         MessageQueueListener messageQueueListener = this.litePullConsumerImpl.getDefaultLitePullConsumer().getMessageQueueListener();
@@ -57,8 +62,15 @@ public class RebalanceLitePullImpl extends RebalanceImpl {
         }
     }
 
+    /**
+     * 根据存储 先保存 偏移量 再移除 偏移量
+     * @param mq
+     * @param pq
+     * @return
+     */
     @Override
     public boolean removeUnnecessaryMessageQueue(MessageQueue mq, ProcessQueue pq) {
+        //FIXME:: 根据存储 先保存 偏移量 再移除 偏移量
         this.litePullConsumerImpl.getOffsetStore().persist(mq);
         this.litePullConsumerImpl.getOffsetStore().removeOffset(mq);
         return true;
@@ -88,18 +100,22 @@ public class RebalanceLitePullImpl extends RebalanceImpl {
 
     @Override
     public long computePullFromWhereWithException(MessageQueue mq) throws MQClientException {
+        //获取消费从 何处消费
         ConsumeFromWhere consumeFromWhere = litePullConsumerImpl.getDefaultLitePullConsumer().getConsumeFromWhere();
         long result = -1;
         switch (consumeFromWhere) {
+            //从最近的偏移量进行消费 从 store 获取 先从内存读取然后再从磁盘读取 偏移量 如果不存在 则 从该消息队列的broker 获取的最大偏移量
             case CONSUME_FROM_LAST_OFFSET: {
                 long lastOffset = litePullConsumerImpl.getOffsetStore().readOffset(mq, ReadOffsetType.MEMORY_FIRST_THEN_STORE);
                 if (lastOffset >= 0) {
                     result = lastOffset;
                 } else if (-1 == lastOffset) {
+                    //如果该偏移是-1 并且 该 topic 是 %RETRY% FIXME:: 第一次启动 没有偏移量 ??
                     if (mq.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) { // First start, no offset
                         result = 0L;
                     } else {
                         try {
+                            //则 从该消息队列的broker 获取的最大偏移量
                             result = this.mQClientFactory.getMQAdminImpl().maxOffset(mq);
                         } catch (MQClientException e) {
                             log.warn("Compute consume offset from last offset exception, mq={}, exception={}", mq, e);
@@ -112,6 +128,7 @@ public class RebalanceLitePullImpl extends RebalanceImpl {
                 break;
             }
             case CONSUME_FROM_FIRST_OFFSET: {
+                //从 store 获取 先从内存读取然后再从磁盘读取 偏移量
                 long lastOffset = litePullConsumerImpl.getOffsetStore().readOffset(mq, ReadOffsetType.MEMORY_FIRST_THEN_STORE);
                 if (lastOffset >= 0) {
                     result = lastOffset;
@@ -123,10 +140,12 @@ public class RebalanceLitePullImpl extends RebalanceImpl {
                 break;
             }
             case CONSUME_FROM_TIMESTAMP: {
+                //从 store 获取 先从内存读取然后再从磁盘读取 偏移量
                 long lastOffset = litePullConsumerImpl.getOffsetStore().readOffset(mq, ReadOffsetType.MEMORY_FIRST_THEN_STORE);
                 if (lastOffset >= 0) {
                     result = lastOffset;
                 } else if (-1 == lastOffset) {
+                    //如果该偏移是-1 并且 该 topic 是 %RETRY%  则 从该消息队列的broker 获取的最大偏移量
                     if (mq.getTopic().startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
                         try {
                             result = this.mQClientFactory.getMQAdminImpl().maxOffset(mq);
@@ -136,8 +155,10 @@ public class RebalanceLitePullImpl extends RebalanceImpl {
                         }
                     } else {
                         try {
+                            //将消费者消费时间转成时间戳
                             long timestamp = UtilAll.parseDate(this.litePullConsumerImpl.getDefaultLitePullConsumer().getConsumeTimestamp(),
                                 UtilAll.YYYYMMDDHHMMSS).getTime();
+                            //查询 指定时间 消费队列的偏移量
                             result = this.mQClientFactory.getMQAdminImpl().searchOffset(mq, timestamp);
                         } catch (MQClientException e) {
                             log.warn("Compute consume offset from last offset exception, mq={}, exception={}", mq, e);

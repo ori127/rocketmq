@@ -56,30 +56,55 @@ import org.apache.rocketmq.srvutil.FileWatchService;
 public class NamesrvController {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private static final InternalLogger WATER_MARK_LOG = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_WATER_MARK_LOGGER_NAME);
-
+    /**
+     * nameServer的配置
+     */
     private final NamesrvConfig namesrvConfig;
-
+    /**
+     * netty 服务的配置
+     */
     private final NettyServerConfig nettyServerConfig;
+    /**
+     * netty 客户端的 配置
+     */
     private final NettyClientConfig nettyClientConfig;
-
+    /**
+     * 打印 key value 的信息 和 请求队列 和 默认队列 状况 的线程池
+     */
     private final ScheduledExecutorService scheduledExecutorService = new ScheduledThreadPoolExecutor(1,
             new BasicThreadFactory.Builder().namingPattern("NSScheduledThread").daemon(true).build());
-
+    /**
+     * 扫描线程池 扫描 Broker 列表长时间没有收到心跳消息 取消注册 关闭 channel
+     */
     private final ScheduledExecutorService scanExecutorService = new ScheduledThreadPoolExecutor(1,
             new BasicThreadFactory.Builder().namingPattern("NSScanScheduledThread").daemon(true).build());
-
+    /**
+     * namespace 对应的 key 管理
+     */
     private final KVConfigManager kvConfigManager;
+    /**
+     * 路由管理
+     */
     private final RouteInfoManager routeInfoManager;
 
     private RemotingClient remotingClient;
     private RemotingServer remotingServer;
-
+    /**
+     * 关闭时 发生异常时 空闲时 关闭对应的 channel
+     */
     private final BrokerHousekeepingService brokerHousekeepingService;
-
+    /**
+     * 默认的执行器
+     */
     private ExecutorService defaultExecutor;
     private ExecutorService clientRequestExecutor;
-
+    /**
+     * 默认线程池队列
+     */
     private BlockingQueue<Runnable> defaultThreadPoolQueue;
+    /**
+     * 客户端线程池队列
+     */
     private BlockingQueue<Runnable> clientRequestThreadPoolQueue;
 
     private final Configuration configuration;
@@ -111,17 +136,21 @@ public class NamesrvController {
         return true;
     }
 
+    /**
+     * 加载 key value 配置
+     */
     private void loadConfig() {
         this.kvConfigManager.load();
     }
 
     private void startScheduleService() {
+        // 扫描 Broker 列表长时间没有收到心跳消息 取消注册 关闭 channel
         this.scanExecutorService.scheduleAtFixedRate(NamesrvController.this.routeInfoManager::scanNotActiveBroker,
             5, this.namesrvConfig.getScanNotActiveBrokerInterval(), TimeUnit.MILLISECONDS);
-
+        //定时 打印 key value
         this.scheduledExecutorService.scheduleAtFixedRate(NamesrvController.this.kvConfigManager::printAllPeriodically,
             1, 10, TimeUnit.MINUTES);
-
+        //打印请求
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 NamesrvController.this.printWaterMark();
@@ -131,11 +160,17 @@ public class NamesrvController {
         }, 10, 1, TimeUnit.SECONDS);
     }
 
+    /**
+     * 初始化网络 初始 netty 客户端 和 netty 服务端
+     */
     private void initiateNetworkComponents() {
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
         this.remotingClient = new NettyRemotingClient(this.nettyClientConfig);
     }
 
+    /**
+     * 初始化线程池
+     */
     private void initiateThreadExecutors() {
         this.defaultThreadPoolQueue = new LinkedBlockingQueue<>(this.namesrvConfig.getDefaultThreadPoolQueueCapacity());
         this.defaultExecutor = new ThreadPoolExecutor(this.namesrvConfig.getDefaultThreadPoolNums(), this.namesrvConfig.getDefaultThreadPoolNums(), 1000 * 60, TimeUnit.MILLISECONDS, this.defaultThreadPoolQueue, new ThreadFactoryImpl("RemotingExecutorThread_")) {
@@ -195,6 +230,11 @@ public class NamesrvController {
         WATER_MARK_LOG.info("[WATERMARK] ClientQueueSize:{} ClientQueueSlowTime:{} " + "DefaultQueueSize:{} DefaultQueueSlowTime:{}", this.clientRequestThreadPoolQueue.size(), headSlowTimeMills(this.clientRequestThreadPoolQueue), this.defaultThreadPoolQueue.size(), headSlowTimeMills(this.defaultThreadPoolQueue));
     }
 
+    /**
+     * 获取队列当中 第一个请求 延迟时间
+     * @param q
+     * @return
+     */
     private long headSlowTimeMills(BlockingQueue<Runnable> q) {
         long slowTimeMills = 0;
         final Runnable firstRunnable = q.peek();
@@ -213,6 +253,9 @@ public class NamesrvController {
         return slowTimeMills;
     }
 
+    /**
+     * 注册对应的处理 若是集群测试 则 默认设置 ClusterTestRequestProcessor
+     */
     private void registerProcessor() {
         if (namesrvConfig.isClusterTest()) {
 
@@ -226,6 +269,9 @@ public class NamesrvController {
         }
     }
 
+    /**
+     *  处理获取路由信息请求的响应 过滤出对应的 zone 下面的路由信息
+     */
     private void initiateRpcHooks() {
         this.remotingServer.registerRPCHook(new ZoneRouteRPCHook());
     }
@@ -234,10 +280,11 @@ public class NamesrvController {
         this.remotingServer.start();
 
         // In test scenarios where it is up to OS to pick up an available port, set the listening port back to config
+        // 如果是 由 操作系统选择 开放的端口 那将该端口 设置回配置
         if (0 == nettyServerConfig.getListenPort()) {
             nettyServerConfig.setListenPort(this.remotingServer.localListenPort());
         }
-
+        //FIXME::将nameSever地址 设置成自己 ?
         this.remotingClient.updateNameServerAddressList(Collections.singletonList(RemotingUtil.getLocalAddress()
             + ":" + nettyServerConfig.getListenPort()));
         this.remotingClient.start();
@@ -245,7 +292,7 @@ public class NamesrvController {
         if (this.fileWatchService != null) {
             this.fileWatchService.start();
         }
-
+        //启动取消注册服务
         this.routeInfoManager.start();
     }
 

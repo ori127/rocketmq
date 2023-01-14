@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 消费这个过滤管理
  * Consumer filter data manager.Just manage the consumers use expression filter.
  */
 public class ConsumerFilterManager extends ConfigManager {
@@ -47,10 +48,16 @@ public class ConsumerFilterManager extends ConfigManager {
 
     private static final long MS_24_HOUR = 24 * 3600 * 1000;
 
+    /**
+     * key 为 topic , value 为 过滤数据
+     */
     private ConcurrentMap<String/*Topic*/, FilterDataMapByTopic>
         filterDataByTopic = new ConcurrentHashMap<String/*Topic*/, FilterDataMapByTopic>(256);
 
     private transient BrokerController brokerController;
+    /**
+     * 布隆过滤器
+     */
     private transient BloomFilter bloomFilter;
 
     public ConsumerFilterManager() {
@@ -71,6 +78,7 @@ public class ConsumerFilterManager extends ConfigManager {
     }
 
     /**
+     * 构建消费者过滤的数据
      * Build consumer filter data.Be care, bloom filter data is not included.
      *
      * @return maybe null
@@ -78,6 +86,7 @@ public class ConsumerFilterManager extends ConfigManager {
     public static ConsumerFilterData build(final String topic, final String consumerGroup,
         final String expression, final String type,
         final long clientVersion) {
+        //如果是 Tag 过滤直接返回
         if (ExpressionType.isTagType(type)) {
             return null;
         }
@@ -137,6 +146,7 @@ public class ConsumerFilterManager extends ConfigManager {
 
     public boolean register(final String topic, final String consumerGroup, final String expression,
         final String type, final long clientVersion) {
+        //如果是Tag过滤 不注册
         if (ExpressionType.isTagType(type)) {
             return false;
         }
@@ -144,7 +154,7 @@ public class ConsumerFilterManager extends ConfigManager {
         if (expression == null || expression.length() == 0) {
             return false;
         }
-
+        //获取 topic 的 过滤数据 如果不存在 则进行添加
         FilterDataMapByTopic filterDataMapByTopic = this.filterDataByTopic.get(topic);
 
         if (filterDataMapByTopic == null) {
@@ -322,10 +332,14 @@ public class ConsumerFilterManager extends ConfigManager {
     }
 
     public static class FilterDataMapByTopic {
-
+        /**
+         * key 为消费者 ,value 为消费者过滤数据
+         */
         private ConcurrentMap<String/*consumer group*/, ConsumerFilterData>
             groupFilterData = new ConcurrentHashMap<String, ConsumerFilterData>();
-
+        /**
+         * tpoic
+         */
         private String topic;
 
         public FilterDataMapByTopic() {

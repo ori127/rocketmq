@@ -20,8 +20,13 @@ package org.apache.rocketmq.store;
 import org.apache.rocketmq.store.logfile.MappedFile;
 
 public class SelectMappedFileResult {
-
+    /**
+     * 剩余可读的文件大小
+     */
     protected int size;
+    /**
+     * 映射的文件
+     */
 
     protected MappedFile mappedFile;
 

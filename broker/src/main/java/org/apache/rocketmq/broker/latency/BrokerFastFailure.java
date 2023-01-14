@@ -31,11 +31,15 @@ import org.apache.rocketmq.remoting.netty.RequestTask;
 import org.apache.rocketmq.remoting.protocol.RemotingSysResponseCode;
 
 /**
+ * 快速失败
  * BrokerFastFailure will cover {@link BrokerController#getSendThreadPoolQueue()} and {@link
  * BrokerController#getPullThreadPoolQueue()}
  */
 public class BrokerFastFailure {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    /**
+     * 定时任务
+     */
     private final ScheduledExecutorService scheduledExecutorService;
     private final BrokerController brokerController;
 
@@ -73,15 +77,16 @@ public class BrokerFastFailure {
     }
 
     private void cleanExpiredRequest() {
-
+        //操作系统页面缓存繁忙 则从sendThreadPoolQueue 获取 runnable 返回系统繁忙
         while (this.brokerController.getMessageStore().isOSPageCacheBusy()) {
             try {
+                //FIXME:: 发送线程池队列 作用是什么
                 if (!this.brokerController.getSendThreadPoolQueue().isEmpty()) {
                     final Runnable runnable = this.brokerController.getSendThreadPoolQueue().poll(0, TimeUnit.SECONDS);
                     if (null == runnable) {
                         break;
                     }
-
+                    //转成 RequestTask 返回响应 返回系统繁忙
                     final RequestTask rt = castRunnable(runnable);
                     if (rt != null) {
                         rt.returnResponse(RemotingSysResponseCode.SYSTEM_BUSY, String.format(
@@ -119,7 +124,9 @@ public class BrokerFastFailure {
     void cleanExpiredRequestInQueue(final BlockingQueue<Runnable> blockingQueue, final long maxWaitTimeMillsInQueue) {
         while (true) {
             try {
+                //祖师队列不为空
                 if (!blockingQueue.isEmpty()) {
+                    //从阻塞队列当中 peek  runnable 转成 RequestTask
                     final Runnable runnable = blockingQueue.peek();
                     if (null == runnable) {
                         break;
@@ -128,7 +135,7 @@ public class BrokerFastFailure {
                     if (rt == null || rt.isStopRun()) {
                         break;
                     }
-
+                    //等待时间 如果超过在 队列中的等待 时间 则从队列中移除 返回系统繁忙
                     final long behind = System.currentTimeMillis() - rt.getCreateTimestamp();
                     if (behind >= maxWaitTimeMillsInQueue) {
                         if (blockingQueue.remove(runnable)) {

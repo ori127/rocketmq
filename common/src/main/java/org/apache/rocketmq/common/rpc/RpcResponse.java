@@ -22,6 +22,9 @@ public class RpcResponse   {
     private int code;
     private CommandCustomHeader header;
     private Object body;
+    /**
+     * RPC 异常信息
+     */
     public RpcException exception;
 
     public RpcResponse() {

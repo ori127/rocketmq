@@ -21,26 +21,55 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.rocketmq.common.MixAll;
 
 public class SubscriptionGroupConfig {
+    /**
+     * 组名
+     */
 
     private String groupName;
-
+    /**
+     * 是否能消费
+     */
     private boolean consumeEnable = true;
+    /**
+     * 是否能从最小的开始消费
+     */
     private boolean consumeFromMinEnable = true;
+    /**
+     * 是否能广播消费
+     */
     private boolean consumeBroadcastEnable = true;
+    /**
+     * 是否有序消费
+     */
     private boolean consumeMessageOrderly = false;
-
+    /**
+     * 重试队列数量
+     */
     private int retryQueueNums = 1;
-
+    /**
+     * 最大重试次数
+     */
     private int retryMaxTimes = 16;
+    /**
+     * 组重试策略 计算 延迟时间
+     */
     private GroupRetryPolicy groupRetryPolicy = new GroupRetryPolicy();
-
+    /**
+     * brokerId
+     */
     private long brokerId = MixAll.MASTER_ID;
+    /**
+     * 哪个broker消费缓慢
+     */
 
     private long whichBrokerWhenConsumeSlowly = 1;
 
     private boolean notifyConsumerIdsChangedEnable = true;
 
     private int groupSysFlag = 0;
+    /**
+     * 消费超时时间
+     */
 
     // Only valid for push consumer
     private int consumeTimeoutMinute = 15;

@@ -20,6 +20,10 @@ package org.apache.rocketmq.common.future;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 
+/**
+ *  FutureTask 扩展
+ * @param <V>
+ */
 public class FutureTaskExt<V> extends FutureTask<V> {
     private final Runnable runnable;
 

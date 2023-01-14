@@ -31,12 +31,30 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.common.statictopic.TopicQueueMappingInfo;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+/**
+ * topic 路由数据
+ */
 public class TopicRouteData extends RemotingSerializable {
+    /**
+     * brokerName1:index;brokerName2:index;
+     */
     private String orderTopicConf;
+    /**
+     * 队列信息
+     */
     private List<QueueData> queueDatas;
+    /**
+     * Broker信息
+     */
     private List<BrokerData> brokerDatas;
+    /**
+     * broker地址 和  Filter Server
+     */
     private HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
     //It could be null or empty
+    /**
+     * key 为 brokerName , value 为 TopicQueueMappingInfo brokerName=> TopicQueueMappingInfo 映射
+     */
     private Map<String/*brokerName*/, TopicQueueMappingInfo> topicQueueMappingByBroker;
 
     public TopicRouteData() {
@@ -118,6 +136,11 @@ public class TopicRouteData extends RemotingSerializable {
         return topicRouteData;
     }
 
+    /**
+     * 判断 RouteDataChanged 是否已经发生改变
+     * @param oldData
+     * @return
+     */
     public boolean topicRouteDataChanged(TopicRouteData oldData) {
         if (oldData == null)
             return true;

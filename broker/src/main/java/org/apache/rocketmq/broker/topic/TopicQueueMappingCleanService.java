@@ -51,11 +51,19 @@ import java.util.Set;
 
 public class TopicQueueMappingCleanService extends ServiceThread {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
-
+    /**
+     * topic 和 TopicQueueMappingDetail 映射管理
+     */
     private TopicQueueMappingManager topicQueueMappingManager;
     private BrokerOuterAPI brokerOuterAPI;
     private RpcClient rpcClient;
+    /**
+     * 消息存储配置
+     */
     private MessageStoreConfig messageStoreConfig;
+    /**
+     * broker配置
+     */
     private BrokerConfig brokerConfig;
     private BrokerController brokerController;
 
@@ -109,11 +117,13 @@ public class TopicQueueMappingCleanService extends ServiceThread {
         boolean changed = false;
         long start = System.currentTimeMillis();
         try {
+            //遍历 topic 获取 TopicQueueMappingDetail
             for (String topic : this.topicQueueMappingManager.getTopicQueueMappingTable().keySet()) {
                 try {
                     if (isStopped()) {
                         break;
                     }
+                    //topic 对应 的 TopicQueueMappingDetail
                     TopicQueueMappingDetail mappingDetail = this.topicQueueMappingManager.getTopicQueueMappingTable().get(topic);
                     if (mappingDetail == null
                             || mappingDetail.getHostedQueues().isEmpty()) {
@@ -123,8 +133,10 @@ public class TopicQueueMappingCleanService extends ServiceThread {
                         log.warn("The TopicQueueMappingDetail [{}] should not exist in this broker", mappingDetail);
                         continue;
                     }
+                    //获取topic 当中的 消息队列 的 broker
                     Set<String> brokers = new HashSet<>();
                     for (List<LogicQueueMappingItem> items: mappingDetail.getHostedQueues().values()) {
+                        //数量小于 1 或者 不是leader进行 跳过
                         if (items.size() <= 1) {
                             continue;
                         }
@@ -134,6 +146,7 @@ public class TopicQueueMappingCleanService extends ServiceThread {
                         LogicQueueMappingItem earlistItem = items.get(0);
                         brokers.add(earlistItem.getBname());
                     }
+                    //key 为 brokerName  ,value 为  TopicStatsTable
                     Map<String, TopicStatsTable> statsTable = new HashMap<>();
                     for (String broker: brokers) {
                         GetTopicStatsInfoRequestHeader header = new GetTopicStatsInfoRequestHeader();
@@ -141,6 +154,7 @@ public class TopicQueueMappingCleanService extends ServiceThread {
                         header.setBname(broker);
                         header.setLo(false);
                         try {
+                            //获取 topic 的 TopicStatsTable
                             RpcRequest rpcRequest = new RpcRequest(RequestCode.GET_TOPIC_STATS_INFO, header, null);
                             RpcResponse rpcResponse = rpcClient.invoke(rpcRequest, brokerConfig.getForwardTimeout()).get();
                             if (rpcResponse.getException() != null) {
@@ -159,20 +173,24 @@ public class TopicQueueMappingCleanService extends ServiceThread {
                         if (items.size() <= 1) {
                             continue;
                         }
+                        //不是 lead 进行跳过
                         if (!TopicQueueMappingUtils.checkIfLeader(items, mappingDetail)) {
                             continue;
                         }
                         LogicQueueMappingItem earlistItem = items.get(0);
+                        //获取 TopicStatsTable
                         TopicStatsTable topicStats = statsTable.get(earlistItem.getBname());
                         if (topicStats == null) {
                             continue;
                         }
+                        //根据 消息队列获取 该 topic偏移量
                         TopicOffset topicOffset = topicStats.getOffsetTable().get(new MessageQueue(topic, earlistItem.getBname(), earlistItem.getQueueId()));
                         if (topicOffset == null) {
                             //this may should not happen
                             log.error("Get null topicOffset for {} {}",topic,  earlistItem);
                             continue;
                         }
+                        //TODO这是在干啥
                         //ignore the maxOffset < 0, which may in case of some error
                         if (topicOffset.getMaxOffset() == topicOffset.getMinOffset()
                             || topicOffset.getMaxOffset() == 0) {

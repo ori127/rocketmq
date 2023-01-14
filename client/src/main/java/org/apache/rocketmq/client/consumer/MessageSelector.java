@@ -20,6 +20,7 @@ package org.apache.rocketmq.client.consumer;
 import org.apache.rocketmq.common.filter.ExpressionType;
 
 /**
+ * 消息过滤
  * Message selector: select message at server.
  * <p>
  * Now, support:
@@ -32,11 +33,13 @@ import org.apache.rocketmq.common.filter.ExpressionType;
 public class MessageSelector {
 
     /**
+     * 消费过来类型 SQL 过滤 还是 TAG 过滤
      * @see org.apache.rocketmq.common.filter.ExpressionType
      */
     private String type;
 
     /**
+     * 过滤表示
      * expression content.
      */
     private String expression;

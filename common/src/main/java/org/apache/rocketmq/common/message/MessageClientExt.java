@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.common.message;
 
+/**
+ * messgeClint 扩展属性
+ */
 public class MessageClientExt extends MessageExt {
 
     public String getOffsetMsgId() {

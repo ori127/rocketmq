@@ -61,7 +61,13 @@ public class RemotingCommand {
     private static final String LONG_CANONICAL_NAME_2 = long.class.getCanonicalName();
     private static final String BOOLEAN_CANONICAL_NAME_1 = Boolean.class.getCanonicalName();
     private static final String BOOLEAN_CANONICAL_NAME_2 = boolean.class.getCanonicalName();
+    /**
+     * 配置的版本对象
+     */
     private static volatile int configVersion = -1;
+    /**
+     * requestId 生产器
+     */
     private static AtomicInteger requestId = new AtomicInteger(0);
 
     private static SerializeType serializeTypeConfigInThisServer = SerializeType.JSON;
@@ -77,17 +83,44 @@ public class RemotingCommand {
         }
     }
 
+    /**
+     * code
+     */
     private int code;
+    /**
+     * 对应的code 语音
+     */
     private LanguageCode language = LanguageCode.JAVA;
+    /**
+     * 对应请求的Mq版本号
+     */
     private int version = 0;
+    /**
+     * requestId
+     */
     private int opaque = requestId.getAndIncrement();
+    /**
+     * 标记位
+     * 0001 表示是Response
+     * 0010 表示是Oneway 单向
+     */
     private int flag = 0;
     private String remark;
+    /**
+     * 额外的属性
+     */
     private HashMap<String, String> extFields;
+    /**
+     * 头对象 不同的请求不同的header
+     */
     private transient CommandCustomHeader customHeader;
-
+    /**
+     * 序列化方式
+     */
     private SerializeType serializeTypeCurrentRPC = serializeTypeConfigInThisServer;
-
+    /**
+     * 消息的消息内容body
+     */
     private transient byte[] body;
 
     protected RemotingCommand() {
@@ -110,10 +143,15 @@ public class RemotingCommand {
         return cmd;
     }
 
+    /**
+     * 设置cmd 版本
+     * @param cmd
+     */
     protected static void setCmdVersion(RemotingCommand cmd) {
         if (configVersion >= 0) {
             cmd.setVersion(configVersion);
         } else {
+            //从系统属性当中获取 rocketmq.remoting.version
             String v = System.getProperty(REMOTING_VERSION_KEY);
             if (v != null) {
                 int value = Integer.parseInt(v);
@@ -252,6 +290,9 @@ public class RemotingCommand {
         return (type.getCode() << 24) | (source & 0x00FFFFFF);
     }
 
+    /**
+     * 标记响应
+     */
     public void markResponseType() {
         int bits = 1 << RPC_TYPE;
         this.flag |= bits;
@@ -264,14 +305,15 @@ public class RemotingCommand {
     public void writeCustomHeader(CommandCustomHeader customHeader) {
         this.customHeader = customHeader;
     }
-
+    //从extFields 当中 反射成对应 类
     public CommandCustomHeader decodeCommandCustomHeader(
         Class<? extends CommandCustomHeader> classHeader) throws RemotingCommandException {
         return decodeCommandCustomHeader(classHeader, true);
     }
-
+    //从 extFields 当中 反射成对应 类
     public CommandCustomHeader decodeCommandCustomHeader(Class<? extends CommandCustomHeader> classHeader,
         boolean useFastEncode) throws RemotingCommandException {
+        //根据类 创建实例对象
         CommandCustomHeader objectHeader;
         try {
             objectHeader = classHeader.getDeclaredConstructor().newInstance();
@@ -286,14 +328,16 @@ public class RemotingCommand {
         }
 
         if (this.extFields != null) {
+            //如果是 FastCodesHeader 直接从 extFields 进行解码
             if (objectHeader instanceof FastCodesHeader && useFastEncode) {
                 ((FastCodesHeader) objectHeader).decode(this.extFields);
                 objectHeader.checkFields();
                 return objectHeader;
             }
-
+            //获取类的所有字段
             Field[] fields = getClazzFields(classHeader);
             for (Field field : fields) {
+                //设置非static 属性 该属性不以 this 开头 设置 对应的属性
                 if (!Modifier.isStatic(field.getModifiers())) {
                     String fieldName = field.getName();
                     if (!fieldName.startsWith("this")) {
@@ -504,11 +548,18 @@ public class RemotingCommand {
         return result;
     }
 
+    /**
+     * 标记未单向Rpc 请求
+     */
     public void markOnewayRPC() {
         int bits = 1 << RPC_ONEWAY;
         this.flag |= bits;
     }
 
+    /**
+     * 判断是否是单向的
+     * @return
+     */
     @JSONField(serialize = false)
     public boolean isOnewayRPC() {
         int bits = 1 << RPC_ONEWAY;

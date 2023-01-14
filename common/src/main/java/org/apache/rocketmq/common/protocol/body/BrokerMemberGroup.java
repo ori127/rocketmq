@@ -23,9 +23,21 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+/**
+ * broker 成员组
+ */
 public class BrokerMemberGroup extends RemotingSerializable {
+    /**
+     * 集群
+     */
     private String cluster;
+    /**
+     * broker 名称
+     */
     private String brokerName;
+    /**
+     * key 为  brokerId , value 为  broker address
+     */
     private Map<Long/* brokerId */, String/* broker address */> brokerAddrs;
 
     // Provide default constructor for serializer

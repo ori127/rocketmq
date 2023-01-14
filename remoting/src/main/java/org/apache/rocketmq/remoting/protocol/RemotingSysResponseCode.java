@@ -18,13 +18,20 @@
 package org.apache.rocketmq.remoting.protocol;
 
 public class RemotingSysResponseCode {
+    /**
+     * 成功
+     */
 
     public static final int SUCCESS = 0;
 
     public static final int SYSTEM_ERROR = 1;
-
+    /**
+     * 对应的消息处理器 拒绝请求 或者  线程池 发生拒绝
+     */
     public static final int SYSTEM_BUSY = 2;
-
+    /**
+     * 没有对应的code 处理处理
+     */
     public static final int REQUEST_CODE_NOT_SUPPORTED = 3;
 
     public static final int TRANSACTION_FAILED = 4;

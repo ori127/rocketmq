@@ -27,10 +27,15 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.ChannelEventListener;
 
+/**
+ * 定时任务 扫描空闲的消费者 和 生产者 过滤 服务器 进行关闭
+ */
 public class ClientHousekeepingService implements ChannelEventListener {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
-
+    /**
+     * 定时任务 扫描空闲的消费者 和 生产者 过滤 服务器 进行关闭
+     */
     private ScheduledExecutorService scheduledExecutorService;
 
     public ClientHousekeepingService(final BrokerController brokerController) {
@@ -40,7 +45,7 @@ public class ClientHousekeepingService implements ChannelEventListener {
     }
 
     public void start() {
-
+        //扫描空闲的消费者 和 生产者 过滤 服务器 进行关闭
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -54,6 +59,7 @@ public class ClientHousekeepingService implements ChannelEventListener {
     }
 
     private void scanExceptionChannel() {
+        //扫描空闲的消费者 和 生产者 过滤 服务器 进行关闭
         this.brokerController.getProducerManager().scanNotActiveChannel();
         this.brokerController.getConsumerManager().scanNotActiveChannel();
         this.brokerController.getFilterServerManager().scanNotActiveChannel();

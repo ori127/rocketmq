@@ -19,12 +19,19 @@ package org.apache.rocketmq.client.common;
 
 import java.util.Random;
 
+/**
+ * 为每个线程 生成 一个 随机数 index
+ */
 public class ThreadLocalIndex {
     private final ThreadLocal<Integer> threadLocalIndex = new ThreadLocal<Integer>();
     private final Random random = new Random();
+    /**
+     * 掩码
+     */
     private final static int POSITIVE_MASK = 0x7FFFFFFF;
 
     public int incrementAndGet() {
+        //从线程当中获取 index 不存在 则生成随机数 index  否则 递增 index
         Integer index = this.threadLocalIndex.get();
         if (null == index) {
             index = random.nextInt();

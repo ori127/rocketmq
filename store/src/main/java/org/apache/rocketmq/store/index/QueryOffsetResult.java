@@ -20,7 +20,13 @@ import java.util.List;
 
 public class QueryOffsetResult {
     private final List<Long> phyOffsets;
+    /**
+     * index文件最后一个更新时间戳
+     */
     private final long indexLastUpdateTimestamp;
+    /**
+     * index 文件最后一个偏移量
+     */
     private final long indexLastUpdatePhyoffset;
 
     public QueryOffsetResult(List<Long> phyOffsets, long indexLastUpdateTimestamp,

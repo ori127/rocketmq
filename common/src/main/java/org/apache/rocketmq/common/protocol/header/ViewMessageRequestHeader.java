@@ -25,6 +25,9 @@ import org.apache.rocketmq.remoting.annotation.CFNotNull;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class ViewMessageRequestHeader implements CommandCustomHeader {
+    /**
+     * 偏移量
+     */
     @CFNotNull
     private Long offset;
 

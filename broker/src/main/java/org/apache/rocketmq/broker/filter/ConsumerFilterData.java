@@ -27,18 +27,42 @@ import org.apache.rocketmq.filter.util.BloomFilterData;
 import java.util.Collections;
 
 /**
+ * 消费这个过滤数据
  * Filter data of consumer.
  */
 public class ConsumerFilterData {
-
+    /**
+     * 消费组
+     */
     private String consumerGroup;
+    /**
+     * topic
+     */
     private String topic;
+    /**
+     * 表达式
+     */
     private String expression;
+    /**
+     * 表达式类型
+     */
     private String expressionType;
+    /**
+     * 表达式
+     */
     private transient Expression compiledExpression;
+    /**
+     * 创建时间
+     */
     private long bornTime;
     private long deadTime = 0;
+    /**
+     * 布隆过滤器数据
+     */
     private BloomFilterData bloomFilterData;
+    /**
+     * 客户端版本
+     */
     private long clientVersion;
 
     public boolean isDead() {

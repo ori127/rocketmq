@@ -46,7 +46,13 @@ public class LocalFileOffsetStore implements OffsetStore {
     private final static InternalLogger log = ClientLogger.getLog();
     private final MQClientInstance mQClientFactory;
     private final String groupName;
+    /**
+     * 存储路径  "LOCAL_OFFSET_STORE_DIR/clientId/groupName/offsets.json"
+     */
     private final String storePath;
+    /**
+     * key 为消息队列, value 为 对应的 偏移量
+     */
     private ConcurrentMap<MessageQueue, AtomicLong> offsetTable =
         new ConcurrentHashMap<MessageQueue, AtomicLong>();
 
@@ -59,6 +65,10 @@ public class LocalFileOffsetStore implements OffsetStore {
             "offsets.json";
     }
 
+    /**
+     * 读取文件进行加载
+     * @throws MQClientException
+     */
     @Override
     public void load() throws MQClientException {
         OffsetSerializeWrapper offsetSerializeWrapper = this.readLocalOffset();
@@ -75,15 +85,23 @@ public class LocalFileOffsetStore implements OffsetStore {
         }
     }
 
+    /**
+     * 根据该 消息队列 获取 其 对应的便宜 如果不存在 则进行映射 如果有值根据 increaseOnly  循环 进行更新  否则 直接进行设置
+     * @param mq
+     * @param offset
+     * @param increaseOnly
+     */
     @Override
     public void updateOffset(MessageQueue mq, long offset, boolean increaseOnly) {
         if (mq != null) {
+            //根据该 消息队列 获取 其 对应的便宜 如果不存在 则进行映射
             AtomicLong offsetOld = this.offsetTable.get(mq);
             if (null == offsetOld) {
                 offsetOld = this.offsetTable.putIfAbsent(mq, new AtomicLong(offset));
             }
 
             if (null != offsetOld) {
+                //如果有值根据 increaseOnly  循环 进行更新  否则 直接进行设置
                 if (increaseOnly) {
                     MixAll.compareAndIncreaseOnly(offsetOld, offset);
                 } else {
@@ -93,12 +111,22 @@ public class LocalFileOffsetStore implements OffsetStore {
         }
     }
 
+    /**
+     *如果先从内存 再 从 磁盘 或者直接从 内存 读取  则根据 消息队列 获取 其对应的偏移量
+     *如果是 从内存 中获取 获取 不到 消息队列 对应的 偏移量 则 直接 返回 -1
+     *从磁盘中读取 则在从文件 当中 生对应的映射 的偏移量 然后根据 该消息 队列 重新进行映射
+     * @param mq
+     * @param type
+     * @return
+     */
     @Override
     public long readOffset(final MessageQueue mq, final ReadOffsetType type) {
         if (mq != null) {
             switch (type) {
                 case MEMORY_FIRST_THEN_STORE:
                 case READ_FROM_MEMORY: {
+                    //如果先从内存 再 从 磁盘 或者直接从 内存 读取  则根据 消息队列 获取 其对应的偏移量
+                    //如果是 从内存 中获取 获取 不到 消息队列 对应的 偏移量 则 直接 返回 -1
                     AtomicLong offset = this.offsetTable.get(mq);
                     if (offset != null) {
                         return offset.get();
@@ -109,6 +137,7 @@ public class LocalFileOffsetStore implements OffsetStore {
                 case READ_FROM_STORE: {
                     OffsetSerializeWrapper offsetSerializeWrapper;
                     try {
+                        //从磁盘中读取 则在从文件 当中 生对应的映射 的偏移量 然后根据 该消息 队列 重新进行映射
                         offsetSerializeWrapper = this.readLocalOffset();
                     } catch (MQClientException e) {
                         return -1;
@@ -133,7 +162,7 @@ public class LocalFileOffsetStore implements OffsetStore {
     public void persistAll(Set<MessageQueue> mqs) {
         if (null == mqs || mqs.isEmpty())
             return;
-
+        //遍历 MessageQueue 然后将 该消息 队列的 偏移量 进行持久化
         OffsetSerializeWrapper offsetSerializeWrapper = new OffsetSerializeWrapper();
         for (Map.Entry<MessageQueue, AtomicLong> entry : this.offsetTable.entrySet()) {
             if (mqs.contains(entry.getKey())) {
@@ -169,6 +198,7 @@ public class LocalFileOffsetStore implements OffsetStore {
 
     @Override
     public Map<MessageQueue, Long> cloneOffsetTable(String topic) {
+        //对该 topic 的消息队列 的偏移量 进行持久 化
         Map<MessageQueue, Long> cloneOffsetTable = new HashMap<MessageQueue, Long>(this.offsetTable.size(), 1);
         for (Map.Entry<MessageQueue, AtomicLong> entry : this.offsetTable.entrySet()) {
             MessageQueue mq = entry.getKey();
@@ -181,9 +211,15 @@ public class LocalFileOffsetStore implements OffsetStore {
         return cloneOffsetTable;
     }
 
+    /**
+     * 读取文件
+     * @return
+     * @throws MQClientException
+     */
     private OffsetSerializeWrapper readLocalOffset() throws MQClientException {
         String content = null;
         try {
+            //读取文件
             content = MixAll.file2String(this.storePath);
         } catch (IOException e) {
             log.warn("Load local offset store file exception", e);
@@ -193,6 +229,7 @@ public class LocalFileOffsetStore implements OffsetStore {
         } else {
             OffsetSerializeWrapper offsetSerializeWrapper = null;
             try {
+                //进行反序列化
                 offsetSerializeWrapper =
                     OffsetSerializeWrapper.fromJson(content, OffsetSerializeWrapper.class);
             } catch (Exception e) {
@@ -204,9 +241,15 @@ public class LocalFileOffsetStore implements OffsetStore {
         }
     }
 
+    /**
+     * 读取备用文件
+     * @return
+     * @throws MQClientException
+     */
     private OffsetSerializeWrapper readLocalOffsetBak() throws MQClientException {
         String content = null;
         try {
+            //读取备用文件
             content = MixAll.file2String(this.storePath + ".bak");
         } catch (IOException e) {
             log.warn("Load local offset store bak file exception", e);

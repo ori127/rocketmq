@@ -39,19 +39,30 @@ public class BrokerConfig extends BrokerIdentity {
      */
     @ImportantField
     private int listenPort = 6888;
-
+    /**
+     * broker Ip1 地址 本地的ip 地址
+     */
     @ImportantField
     private String brokerIP1 = RemotingUtil.getLocalAddress();
+    /**
+     * broker Ip2 地址 本地的ip 地址
+     */
     private String brokerIP2 = RemotingUtil.getLocalAddress();
 
     private int brokerPermission = PermName.PERM_READ | PermName.PERM_WRITE;
     private int defaultTopicQueueNums = 8;
+    /**
+     * 是否自动创建 Topic
+     */
     @ImportantField
     private boolean autoCreateTopicEnable = true;
 
     private boolean clusterTopicEnable = true;
 
     private boolean brokerTopicEnable = true;
+    /**
+     * 是否自动创建订阅组
+     */
     @ImportantField
     private boolean autoCreateSubscriptionGroup = true;
     private String messageStorePlugIn = "";
@@ -105,13 +116,23 @@ public class BrokerConfig extends BrokerIdentity {
     private int endTransactionPoolQueueCapacity = 100000;
     private int adminBrokerThreadPoolQueueCapacity = 10000;
     private int loadBalanceThreadPoolQueueCapacity = 100000;
-
+    /**
+     * 过滤服务数量
+     */
     private int filterServerNums = 0;
+    /**
+     * 长轮训
+     */
 
     private boolean longPollingEnable = true;
+    /**
+     * 端轮训时间
+     */
 
     private long shortPollingTimeMills = 1000;
-
+    /**
+     * 通知消费这客户端发生改变
+     */
     private boolean notifyConsumerIdsChangedEnable = true;
 
     private boolean highSpeedMode = false;
@@ -135,7 +156,9 @@ public class BrokerConfig extends BrokerIdentity {
 
     private boolean disableConsumeIfConsumerReadSlowly = false;
     private long consumerFallbehindThreshold = 1024L * 1024 * 1024 * 16;
-
+    /**
+     * 快速失败是否启用
+     */
     private boolean brokerFastFailureEnable = true;
     private long waitTimeMillsInSendQueue = 200;
     private long waitTimeMillsInPullQueue = 5 * 1000;
@@ -207,7 +230,9 @@ public class BrokerConfig extends BrokerIdentity {
     private int popCkStayBufferTimeOut = 3 * 1000;
     private int popCkMaxBufferSize = 200000;
     private int popCkOffsetMaxQueueSize = 20000;
-
+    /**
+     * 是否事实通知消费者发生改变
+     */
     private boolean realTimeNotifyConsumerChange = true;
 
     private boolean litePullMessageEnable = true;
@@ -216,6 +241,7 @@ public class BrokerConfig extends BrokerIdentity {
     private int syncBrokerMemberGroupPeriod = 1000;
 
     /**
+     * 从 nameserver获取 topic 路由信息的间隔
      * the interval of pulling topic information from the named server
      */
     private long loadBalancePollNameServerInterval = 1000 * 30;
@@ -232,6 +258,7 @@ public class BrokerConfig extends BrokerIdentity {
     private int defaultPopShareQueueNum = -1;
 
     /**
+     * 事务消息超时时间
      * The minimum time of the transactional message  to be checked firstly, one message only exceed this time interval
      * that can be checked.
      */
@@ -239,6 +266,7 @@ public class BrokerConfig extends BrokerIdentity {
     private long transactionTimeOut = 6 * 1000;
 
     /**
+     * 事务消息最大检查次数
      * The maximum number of times the message was checked, if exceed this value, this message will be discarded.
      */
     @ImportantField
@@ -281,9 +309,13 @@ public class BrokerConfig extends BrokerIdentity {
     private boolean skipPreOnline = false;
 
     private boolean asyncSendEnable = true;
-
+    /**
+     * 消费偏移量更新的步调
+     */
     private long consumerOffsetUpdateVersionStep = 500;
-
+    /**
+     * 延迟等级偏移量更新的步调
+     */
     private long delayOffsetUpdateVersionStep = 200;
 
     /**

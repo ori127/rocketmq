@@ -24,10 +24,25 @@ import org.apache.rocketmq.common.UtilAll;
 
 public class MessageClientIDSetter {
     private static final String TOPIC_KEY_SPLITTER = "#";
+    /**
+     *  生成的Id 长度
+     */
     private static final int LEN;
+    /**
+     * ip + pid + ClassLoader.hash
+     */
     private static final char[] FIX_STRING;
+    /**
+     * 计数
+     */
     private static final AtomicInteger COUNTER;
+    /**
+     * 设置开始时间 为当前月开始时间
+     */
     private static long startTime;
+    /**
+     * 下一次开始时间 为下个月的结束时间
+     */
     private static long nextStartTime;
 
     static {
@@ -115,27 +130,41 @@ public class MessageClientIDSetter {
         char[] sb = new char[LEN * 2];
         System.arraycopy(FIX_STRING, 0, sb, 0, FIX_STRING.length);
         long current = System.currentTimeMillis();
+        //如果当前时间 已经 超过  nextStartTime 重新计算
         if (current >= nextStartTime) {
             setStartTime(current);
         }
+        //计算时间差
         int diff = (int)(current - startTime);
         if (diff < 0 && diff > -1000_000) {
             // may cause by NTP
             diff = 0;
         }
         int pos = FIX_STRING.length;
+        //写入时间差
         UtilAll.writeInt(sb, pos, diff);
+        //FIXME: 为什么移动 8 一个 int 需要 8个 16 进制 只用一个 char 表示一个 16 进制
         pos += 8;
+        //写入计数
         UtilAll.writeShort(sb, pos, COUNTER.getAndIncrement());
         return new String(sb);
     }
 
+    /**
+     * 为该消息设置 该客户端的 唯一的 id
+     * @param msg
+     */
     public static void setUniqID(final Message msg) {
         if (msg.getProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX) == null) {
             msg.putProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, createUniqID());
         }
     }
 
+    /**
+     * 从 msg 属性当中 当中的 client 唯一 id
+     * @param msg
+     * @return
+     */
     public static String getUniqID(final Message msg) {
         return msg.getProperty(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
     }

@@ -22,14 +22,33 @@ import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.protocol.NamespaceUtil;
 import org.apache.rocketmq.remoting.RPCHook;
 
+/**
+ * 事务MQ 生产者
+ */
 public class TransactionMQProducer extends DefaultMQProducer {
+    /**
+     * 为了兼容旧版 回查事务状态 的监听器
+     */
     private TransactionCheckListener transactionCheckListener;
+    /**
+     * 回查 本地事务的线程池,核心线程数量
+     */
     private int checkThreadPoolMinSize = 1;
+    /**
+     * 回查 本地事务的线程池,最大线程数量
+     */
     private int checkThreadPoolMaxSize = 1;
+    /**
+     * 回查事务状态的最大数量
+     */
     private int checkRequestHoldMax = 2000;
-
+    /**
+     * 线程池,用来回查 本地事务的线程池
+     */
     private ExecutorService executorService;
-
+    /**
+     * 事务监听 ,用来发送半事务消息后 执行本地事务, 或者 半消息事务得不到 回应来 回查本地事务
+     */
     private TransactionListener transactionListener;
 
     public TransactionMQProducer() {
@@ -78,27 +97,39 @@ public class TransactionMQProducer extends DefaultMQProducer {
         if (null == this.transactionCheckListener) {
             throw new MQClientException("localTransactionBranchCheckListener is null", null);
         }
-
+        //为消息设置topic 发送消息
         msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
         return this.defaultMQProducerImpl.sendMessageInTransaction(msg, tranExecuter, arg);
     }
 
+    /**
+     * 发送事务消息
+     * @param msg Transactional message to send.
+     * @param arg Argument used along with local transaction executor.
+     * @return
+     * @throws MQClientException
+     */
     @Override
     public TransactionSendResult sendMessageInTransaction(final Message msg,
         final Object arg) throws MQClientException {
         if (null == this.transactionListener) {
             throw new MQClientException("TransactionListener is null", null);
         }
-
+        //为消息设置  Namespace topic 发送消息
         msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
         return this.defaultMQProducerImpl.sendMessageInTransaction(msg, null, arg);
     }
 
+    /**
+     * 获取回查事务消息监听器
+     * @return
+     */
     public TransactionCheckListener getTransactionCheckListener() {
         return transactionCheckListener;
     }
 
     /**
+     * 设置回查事务消息监听器
      * This method will be removed in the version 5.0.0 and set a custom thread pool is recommended.
      */
     @Deprecated

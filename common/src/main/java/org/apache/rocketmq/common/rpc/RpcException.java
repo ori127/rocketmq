@@ -18,6 +18,9 @@ package org.apache.rocketmq.common.rpc;
 
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
+/**
+ * Rpc异常
+ */
 public class RpcException extends RemotingException {
     private int errorCode;
     public RpcException(int errorCode, String message) {

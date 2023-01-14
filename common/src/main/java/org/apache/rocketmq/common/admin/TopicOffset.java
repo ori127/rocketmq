@@ -16,9 +16,21 @@
  */
 package org.apache.rocketmq.common.admin;
 
+/**
+ * topic 偏移量
+ */
 public class TopicOffset {
+    /**
+     * 最小偏移量
+     */
     private long minOffset;
+    /**
+     * 最大偏移量
+     */
     private long maxOffset;
+    /**
+     * 最近更新时间
+     */
     private long lastUpdateTimestamp;
 
     public long getMinOffset() {

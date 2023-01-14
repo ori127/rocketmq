@@ -29,6 +29,7 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import io.netty.buffer.ByteBuf;
 
 /**
+ * 使用短变量名加快FastJson反序列化过程。
  * Use short variable name to speed up FastJson deserialization process.
  */
 public class SendMessageRequestHeaderV2 implements CommandCustomHeader, FastCodesHeader {

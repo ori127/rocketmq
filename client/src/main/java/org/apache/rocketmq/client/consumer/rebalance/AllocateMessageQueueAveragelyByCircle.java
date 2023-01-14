@@ -23,6 +23,8 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.message.MessageQueue;
 
 /**
+ * 该消费者 在 该消费组 中 index
+ * 根据消息 序号 hash 分配 到对应的消费者
  * Cycle average Hashing queue algorithm
  */
 public class AllocateMessageQueueAveragelyByCircle extends AbstractAllocateMessageQueueStrategy {
@@ -43,7 +45,8 @@ public class AllocateMessageQueueAveragelyByCircle extends AbstractAllocateMessa
         if (!check(consumerGroup, currentCID, mqAll, cidAll)) {
             return result;
         }
-
+        //该消费者 在 该消费组 中 index
+        //根据消息队列 序号 hash 分配 到对应的消费者
         int index = cidAll.indexOf(currentCID);
         for (int i = index; i < mqAll.size(); i++) {
             if (i % cidAll.size() == index) {

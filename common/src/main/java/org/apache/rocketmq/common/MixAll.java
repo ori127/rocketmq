@@ -63,6 +63,9 @@ public class MixAll {
     public static final String WS_DOMAIN_SUBGROUP = System.getProperty("rocketmq.namesrv.domain.subgroup", "nsaddr");
     //http://jmenv.tbsite.net:8080/rocketmq/nsaddr
     //public static final String WS_ADDR = "http://" + WS_DOMAIN_NAME + ":8080/rocketmq/" + WS_DOMAIN_SUBGROUP;
+    /**
+     * 默认的生产者 生产者组名
+     */
     public static final String DEFAULT_PRODUCER_GROUP = "DEFAULT_PRODUCER";
     public static final String DEFAULT_CONSUMER_GROUP = "DEFAULT_CONSUMER";
     public static final String TOOLS_CONSUMER_GROUP = "TOOLS_CONSUMER";
@@ -76,25 +79,48 @@ public class MixAll {
     public static final String CID_ONSAPI_PERMISSION_GROUP = "CID_ONSAPI_PERMISSION";
     public static final String CID_ONSAPI_OWNER_GROUP = "CID_ONSAPI_OWNER";
     public static final String CID_ONSAPI_PULL_GROUP = "CID_ONSAPI_PULL";
+    /**
+     * 系统消费前缀
+     */
     public static final String CID_RMQ_SYS_PREFIX = "CID_RMQ_SYS_";
     public static final List<String> LOCAL_INET_ADDRESS = getLocalInetAddress();
     public static final String LOCALHOST = localhost();
     public static final String DEFAULT_CHARSET = "UTF-8";
+    /**
+     * 主 id
+     */
     public static final long MASTER_ID = 0L;
+    /**
+     * 备 第一个 ID
+     */
     public static final long FIRST_SLAVE_ID = 1L;
+    /**
+     * pid
+     */
     public static final long CURRENT_JVM_PID = getPID();
     public final static int UNIT_PRE_SIZE_FOR_MSG = 28;
     public final static int ALL_ACK_IN_SYNC_STATE_SET = -1;
-
+    /**
+     * 重试 topic 前缀
+     */
     public static final String RETRY_GROUP_TOPIC_PREFIX = "%RETRY%";
+    /**
+     * 延迟 topic 前缀
+     */
     public static final String DLQ_GROUP_TOPIC_PREFIX = "%DLQ%";
     public static final String REPLY_TOPIC_POSTFIX = "REPLY_TOPIC";
     public static final String UNIQUE_MSG_QUERY_FLAG = "_UNIQUE_KEY_QUERY";
     public static final String DEFAULT_TRACE_REGION_ID = "DefaultRegion";
+    /**
+     * 消费结果
+     */
     public static final String CONSUME_CONTEXT_TYPE = "ConsumeContextType";
     public static final String CID_SYS_RMQ_TRANS = "CID_RMQ_SYS_TRANS";
     public static final String ACL_CONF_TOOLS_FILE = "/conf/tools.yml";
     public static final String REPLY_MESSAGE_FLAG = "reply";
+    /**
+     * 轻量消息队列前缀
+     */
     public static final String LMQ_PREFIX = "%LMQ%";
     public static final String MULTI_DISPATCH_QUEUE_SPLITTER = ",";
     public static final String REQ_T = "ReqT";
@@ -109,6 +135,9 @@ public class MixAll {
     public static final String LOGICAL_QUEUE_MOCK_BROKER_PREFIX = "__syslo__";
     public static final String METADATA_SCOPE_GLOBAL = "__global__";
     public static final String LOGICAL_QUEUE_MOCK_BROKER_NAME_NOT_EXIST = "__syslo__none__";
+    /**
+     * 多个路径分割符
+     */
     public static final String MULTI_PATH_SPLITTER = System.getProperty("rocketmq.broker.multiPathSplitter", ",");
 
     public static String getWSAddr() {
@@ -121,6 +150,11 @@ public class MixAll {
         return wsAddr;
     }
 
+    /**
+     * 为 consumerGroup 添加  "%RETRY%";
+     * @param consumerGroup
+     * @return
+     */
     public static String getRetryTopic(final String consumerGroup) {
         return RETRY_GROUP_TOPIC_PREFIX + consumerGroup;
     }
@@ -129,6 +163,11 @@ public class MixAll {
         return clusterName + "_" + REPLY_TOPIC_POSTFIX;
     }
 
+    /**
+     * 是否是是系统消费组
+     * @param consumerGroup
+     * @return
+     */
     public static boolean isSysConsumerGroup(final String consumerGroup) {
         return consumerGroup.startsWith(CID_RMQ_SYS_PREFIX);
     }
@@ -137,6 +176,12 @@ public class MixAll {
         return DLQ_GROUP_TOPIC_PREFIX + consumerGroup;
     }
 
+    /**
+     * 将端口转成vip端口号 vip端口为原端口-2
+     * @param isChange
+     * @param brokerAddr
+     * @return
+     */
     public static String brokerVIPChannel(final boolean isChange, final String brokerAddr) {
         if (isChange) {
             int split = brokerAddr.lastIndexOf(":");
@@ -306,9 +351,14 @@ public class MixAll {
         return properties;
     }
 
+    /**
+     * 遍历类所有字段 不是Static 不是 this 开头的属性 添加 到属性当中
+     * @param object
+     * @return
+     */
     public static Properties object2Properties(final Object object) {
         Properties properties = new Properties();
-
+        //遍历类所有字段 不是Static 不是 this 开头的属性 添加 到属性当中
         Field[] fields = object.getClass().getDeclaredFields();
         for (Field field : fields) {
             if (!Modifier.isStatic(field.getModifiers())) {
@@ -332,17 +382,25 @@ public class MixAll {
         return properties;
     }
 
+    /**
+     * 将属性设置到 对应配置
+     * @param p
+     * @param object
+     */
     public static void properties2Object(final Properties p, final Object object) {
         Method[] methods = object.getClass().getMethods();
         for (Method method : methods) {
             String mn = method.getName();
             if (mn.startsWith("set")) {
                 try {
+                    //剩余字母
                     String tmp = mn.substring(4);
+                    //第一个字母 需要转成小写
                     String first = mn.substring(3, 4);
-
+                    //拼成对应的key 从属性当中获取
                     String key = first.toLowerCase() + tmp;
                     String property = p.getProperty(key);
+                    //获取方法参数 将 属性 转成的对应的参数然后 设置值
                     if (property != null) {
                         Class<?>[] pt = method.getParameterTypes();
                         if (pt != null && pt.length > 0) {

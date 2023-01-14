@@ -26,6 +26,9 @@ import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.heartbeat.ConsumeType;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 
+/**
+ *
+ */
 public class RebalancePullImpl extends RebalanceImpl {
     private final DefaultMQPullConsumerImpl defaultMQPullConsumerImpl;
 
@@ -39,7 +42,12 @@ public class RebalancePullImpl extends RebalanceImpl {
         super(consumerGroup, messageModel, allocateMessageQueueStrategy, mQClientFactory);
         this.defaultMQPullConsumerImpl = defaultMQPullConsumerImpl;
     }
-
+    /**
+     * 获取队列监听器 通知 消息队列 发生改变
+     * @param topic
+     * @param mqAll
+     * @param mqDivided
+     */
     @Override
     public void messageQueueChanged(String topic, Set<MessageQueue> mqAll, Set<MessageQueue> mqDivided) {
         MessageQueueListener messageQueueListener = this.defaultMQPullConsumerImpl.getDefaultMQPullConsumer().getMessageQueueListener();
@@ -51,9 +59,15 @@ public class RebalancePullImpl extends RebalanceImpl {
             }
         }
     }
-
+    /**
+     * 根据存储 先保存 偏移量 再移除 偏移量
+     * @param mq
+     * @param pq
+     * @return
+     */
     @Override
     public boolean removeUnnecessaryMessageQueue(MessageQueue mq, ProcessQueue pq) {
+        //FIXME:: 根据存储 先保存 偏移量 再移除 偏移量
         this.defaultMQPullConsumerImpl.getOffsetStore().persist(mq);
         this.defaultMQPullConsumerImpl.getOffsetStore().removeOffset(mq);
         return true;
@@ -75,6 +89,12 @@ public class RebalancePullImpl extends RebalanceImpl {
         return 0;
     }
 
+    /**
+     * FIXME::为什么这个偏移是 0
+     * @param mq
+     * @return
+     * @throws MQClientException
+     */
     @Override
     public long computePullFromWhereWithException(MessageQueue mq) throws MQClientException {
         return 0;

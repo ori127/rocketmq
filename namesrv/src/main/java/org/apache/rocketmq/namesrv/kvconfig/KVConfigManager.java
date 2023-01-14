@@ -33,7 +33,9 @@ public class KVConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
     private final NamesrvController namesrvController;
-
+    /**
+     * 读写锁 用来修改 configTable
+     */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final HashMap<String/* Namespace */, HashMap<String/* Key */, String/* Value */>> configTable =
         new HashMap<String, HashMap<String, String>>();
@@ -45,11 +47,13 @@ public class KVConfigManager {
     public void load() {
         String content = null;
         try {
+            //获取 kvConfig.json 的内容
             content = MixAll.file2String(this.namesrvController.getNamesrvConfig().getKvConfigPath());
         } catch (IOException e) {
             log.warn("Load KV config table exception", e);
         }
         if (content != null) {
+            //json 内容进行 反序列化  设置 configTable
             KVConfigSerializeWrapper kvConfigSerializeWrapper =
                 KVConfigSerializeWrapper.fromJson(content, KVConfigSerializeWrapper.class);
             if (null != kvConfigSerializeWrapper) {
@@ -61,15 +65,17 @@ public class KVConfigManager {
 
     public void putKVConfig(final String namespace, final String key, final String value) {
         try {
+            //进行上锁
             this.lock.writeLock().lockInterruptibly();
             try {
+                //判断该namespace config 是否已经存在 不存 进行创建 config
                 HashMap<String, String> kvTable = this.configTable.get(namespace);
                 if (null == kvTable) {
                     kvTable = new HashMap<>();
                     this.configTable.put(namespace, kvTable);
                     log.info("putKVConfig create new Namespace {}", namespace);
                 }
-
+                //设置值
                 final String prev = kvTable.put(key, value);
                 if (null != prev) {
                     log.info("putKVConfig update config item, Namespace: {} Key: {} Value: {}",
@@ -79,19 +85,25 @@ public class KVConfigManager {
                         namespace, key, value);
                 }
             } finally {
+                //解锁
                 this.lock.writeLock().unlock();
             }
         } catch (InterruptedException e) {
             log.error("putKVConfig InterruptedException", e);
         }
-
+        //进行持久化
         this.persist();
     }
 
+    /**
+     * 添加配置信息 或者 修改配置 都会进行持久化
+     */
     public void persist() {
         try {
+            //上锁
             this.lock.readLock().lockInterruptibly();
             try {
+                //进行序列化包装 转成 json 写到文件   kvConfig.json
                 KVConfigSerializeWrapper kvConfigSerializeWrapper = new KVConfigSerializeWrapper();
                 kvConfigSerializeWrapper.setConfigTable(this.configTable);
 
@@ -112,6 +124,11 @@ public class KVConfigManager {
 
     }
 
+    /**
+     * 删除该namespace 下的 对应的 key
+     * @param namespace
+     * @param key
+     */
     public void deleteKVConfig(final String namespace, final String key) {
         try {
             this.lock.writeLock().lockInterruptibly();
@@ -132,6 +149,11 @@ public class KVConfigManager {
         this.persist();
     }
 
+    /**
+     * 根据 NameSpace 获取 kv 表 转成 json 进行序列化
+     * @param namespace
+     * @return
+     */
     public byte[] getKVListByNamespace(final String namespace) {
         try {
             this.lock.readLock().lockInterruptibly();
@@ -152,6 +174,11 @@ public class KVConfigManager {
         return null;
     }
 
+    /**
+     * 根据 NameSpace 获取 key 对应的值
+     * @param namespace
+     * @return
+     */
     public String getKVConfig(final String namespace, final String key) {
         try {
             this.lock.readLock().lockInterruptibly();
@@ -170,6 +197,9 @@ public class KVConfigManager {
         return null;
     }
 
+    /**
+     * 打印key value信息
+     */
     public void printAllPeriodically() {
         try {
             this.lock.readLock().lockInterruptibly();

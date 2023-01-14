@@ -31,15 +31,19 @@ public class HAWriter {
     protected final List<HAWriteHook> writeHookList = new ArrayList<>();
 
     public boolean write(SocketChannel socketChannel, ByteBuffer byteBufferWrite) throws IOException {
+        //连续写入字节数量 为 0的次数
         int writeSizeZeroTimes = 0;
+        //如果还有剩余 则向 该通道写入字节 调用写 后钩子
         while (byteBufferWrite.hasRemaining()) {
             int writeSize = socketChannel.write(byteBufferWrite);
             for (HAWriteHook writeHook : writeHookList) {
                 writeHook.afterWrite(writeSize);
             }
+            //如果有字节写出 则 重新计数
             if (writeSize > 0) {
                 writeSizeZeroTimes = 0;
             } else if (writeSize == 0) {
+                //如果连续写入字节为0的次数超过3次则退出
                 if (++writeSizeZeroTimes >= 3) {
                     break;
                 }

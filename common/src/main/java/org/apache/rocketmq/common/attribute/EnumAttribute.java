@@ -19,7 +19,13 @@ package org.apache.rocketmq.common.attribute;
 import java.util.Set;
 
 public class EnumAttribute extends Attribute {
+    /**
+     * 属性的 所 对应的集合
+     */
     private final Set<String> universe;
+    /**
+     * 默认值
+     */
     private final String defaultValue;
 
     public EnumAttribute(String name, boolean changeable, Set<String> universe, String defaultValue) {

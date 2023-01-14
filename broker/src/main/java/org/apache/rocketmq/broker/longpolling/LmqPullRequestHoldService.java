@@ -40,6 +40,7 @@ public class LmqPullRequestHoldService extends PullRequestHoldService {
 
     @Override
     public void checkHoldRequest() {
+        //遍历 pullRequestTable topic@queueId 进行 "@" 分割
         for (String key : pullRequestTable.keySet()) {
             int idx = key.lastIndexOf(TOPIC_QUEUEID_SEPARATOR);
             if (idx <= 0 || idx >= key.length() - 1) {
@@ -48,12 +49,14 @@ public class LmqPullRequestHoldService extends PullRequestHoldService {
             }
             String topic = key.substring(0, idx);
             int queueId = Integer.parseInt(key.substring(idx + 1));
+            //获取 该 topic 该 队列 最大偏移量 进行通知消息到达
             final long offset = brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
             try {
                 this.notifyMessageArriving(topic, queueId, offset);
             } catch (Throwable e) {
                 LOGGER.error("check hold request failed. topic={}, queueId={}", topic, queueId, e);
             }
+            //如果是 轻量级 topic 则从 pullRequestTable 移除该 topic 队列的 ManyPullRequest
             if (MixAll.isLmq(topic)) {
                 ManyPullRequest mpr = pullRequestTable.get(key);
                 if (mpr == null || mpr.getPullRequestList() == null || mpr.getPullRequestList().isEmpty()) {

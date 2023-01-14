@@ -19,7 +19,14 @@ package org.apache.rocketmq.common.utils;
 
 import java.util.UUID;
 
+/**
+ *相关 id ,生成 uuid
+ */
 public class CorrelationIdUtil {
+    /**
+     * 生成的uuid
+     * @return
+     */
     public static String createCorrelationId() {
         return UUID.randomUUID().toString();
     }

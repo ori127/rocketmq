@@ -21,6 +21,9 @@ public class NettyClientConfig {
      * Worker thread number
      */
     private int clientWorkerThreads = NettySystemConfig.clientWorkerSize;
+    /**
+     * 客户端回调线程数量
+     */
     private int clientCallbackExecutorThreads = Runtime.getRuntime().availableProcessors();
     private int clientOnewaySemaphoreValue = NettySystemConfig.CLIENT_ONEWAY_SEMAPHORE_VALUE;
     private int clientAsyncSemaphoreValue = NettySystemConfig.CLIENT_ASYNC_SEMAPHORE_VALUE;
@@ -37,7 +40,9 @@ public class NettyClientConfig {
     private int clientSocketRcvBufSize = NettySystemConfig.socketRcvbufSize;
     private boolean clientPooledByteBufAllocatorEnable = false;
     private boolean clientCloseSocketIfTimeout = NettySystemConfig.clientCloseSocketIfTimeout;
-
+    /**
+     * 是否使用 ssl
+     */
     private boolean useTLS;
 
     private int writeBufferHighWaterMark = NettySystemConfig.writeBufferHighWaterMark;

@@ -61,6 +61,10 @@ public class UtilAll {
     public static final String YYYY_MM_DD_HH_MM_SS = "yyyy-MM-dd HH:mm:ss";
     public static final String YYYY_MM_DD_HH_MM_SS_SSS = "yyyy-MM-dd#HH:mm:ss:SSS";
     public static final String YYYYMMDDHHMMSS = "yyyyMMddHHmmss";
+    /**
+     * 16进制 1个16进制 表示4位  2个16进制 表示8位 一个字节
+     * 两个字节 表示 16位  四个字节 32 位
+     */
     final static char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
     final static String HOST_NAME = ManagementFactory.getRuntimeMXBean().getName(); // format: "pid@hostname"
 
@@ -294,6 +298,11 @@ public class UtilAll {
         return (int) (crc32.getValue() & 0x7FFFFFFF);
     }
 
+    /**
+     * 将每个 字节 低 4位 转 16进制 存在一个char 高4位转成 16进制 存在一个char
+     * @param src
+     * @return
+     */
     public static String bytes2string(byte[] src) {
         char[] hexChars = new char[src.length * 2];
         for (int j = 0; j < src.length; j++) {

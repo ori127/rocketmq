@@ -26,8 +26,17 @@ import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 public class TopicPublishInfo {
     private boolean orderTopic = false;
     private boolean haveTopicRouterInfo = false;
+    /**
+     * 消息队列信息
+     */
     private List<MessageQueue> messageQueueList = new ArrayList<MessageQueue>();
+    /**
+     * 要发送消息队列的 index
+     */
     private volatile ThreadLocalIndex sendWhichQueue = new ThreadLocalIndex();
+    /**
+     * topic 路由 数据
+     */
     private TopicRouteData topicRouteData;
 
     public boolean isOrderTopic() {
@@ -38,6 +47,10 @@ public class TopicPublishInfo {
         this.orderTopic = orderTopic;
     }
 
+    /**
+     * 消息队列不为空
+     * @return
+     */
     public boolean ok() {
         return null != this.messageQueueList && !this.messageQueueList.isEmpty();
     }
@@ -65,11 +78,14 @@ public class TopicPublishInfo {
     public void setHaveTopicRouterInfo(boolean haveTopicRouterInfo) {
         this.haveTopicRouterInfo = haveTopicRouterInfo;
     }
-
+    /**
+     * 增加 要发送消息队列的 index 求余 选着一个发送的队列 该队列的 brokerName 不是最近 发送过的
+     */
     public MessageQueue selectOneMessageQueue(final String lastBrokerName) {
         if (lastBrokerName == null) {
             return selectOneMessageQueue();
         } else {
+            //增加 要发送消息队列的 index 求余 选着一个发送的队列 该队列的 brokerName 不是最近 发送过的
             for (int i = 0; i < this.messageQueueList.size(); i++) {
                 int index = this.sendWhichQueue.incrementAndGet();
                 int pos = Math.abs(index) % this.messageQueueList.size();
@@ -84,7 +100,12 @@ public class TopicPublishInfo {
         }
     }
 
+    /**
+     * 增加 要发送消息队列的 index 求余 选着一个发送的队列
+     * @return
+     */
     public MessageQueue selectOneMessageQueue() {
+        //增加 要发送消息队列的 index 求余 选着一个发送的队列
         int index = this.sendWhichQueue.incrementAndGet();
         int pos = Math.abs(index) % this.messageQueueList.size();
         if (pos < 0)
@@ -92,7 +113,13 @@ public class TopicPublishInfo {
         return this.messageQueueList.get(pos);
     }
 
+    /**
+     * 遍历 topic 当中的队列 获取 一个 broker 下的队列
+     * @param brokerName
+     * @return
+     */
     public int getQueueIdByBroker(final String brokerName) {
+        //遍历 topic 当中的队列 获取 一个 broker 下的队列
         for (int i = 0; i < topicRouteData.getQueueDatas().size(); i++) {
             final QueueData queueData = this.topicRouteData.getQueueDatas().get(i);
             if (queueData.getBrokerName().equals(brokerName)) {

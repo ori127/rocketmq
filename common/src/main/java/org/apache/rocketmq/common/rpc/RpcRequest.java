@@ -16,9 +16,21 @@
  */
 package org.apache.rocketmq.common.rpc;
 
+/**
+ * Rpc请求
+ */
 public class RpcRequest {
+    /**
+     * 请求code
+     */
     int code;
+    /**
+     * 请求头
+     */
     private RpcRequestHeader header;
+    /**
+     * body
+     */
     private Object body;
 
     public RpcRequest(int code, RpcRequestHeader header, Object body) {

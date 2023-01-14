@@ -21,9 +21,13 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.common.message.MessageQueue;
 
 /**
+ * 消息队列锁
  * Message lock,strictly ensure the single queue only one thread at a time consuming
  */
 public class MessageQueueLock {
+    /**
+     * key 为 消息队列, value.key 为 锁的key value.value 为 锁
+     */
     private ConcurrentMap<MessageQueue, ConcurrentMap<Integer, Object>> mqLockTable =
         new ConcurrentHashMap<MessageQueue, ConcurrentMap<Integer, Object>>(32);
 
@@ -32,6 +36,7 @@ public class MessageQueueLock {
     }
 
     public Object fetchLockObject(final MessageQueue mq, final int shardingKeyIndex) {
+        //根据消息队列获取 key => object 锁映射
         ConcurrentMap<Integer, Object> objMap = this.mqLockTable.get(mq);
         if (null == objMap) {
             objMap = new ConcurrentHashMap<Integer, Object>(32);
@@ -40,7 +45,7 @@ public class MessageQueueLock {
                 objMap = prevObjMap;
             }
         }
-
+        //根据 key 获取 对应的锁
         Object lock = objMap.get(shardingKeyIndex);
         if (null == lock) {
             lock = new Object();

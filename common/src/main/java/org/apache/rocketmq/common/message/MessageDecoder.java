@@ -34,8 +34,14 @@ import org.apache.rocketmq.common.compression.Compressor;
 import org.apache.rocketmq.common.compression.CompressorFactory;
 import org.apache.rocketmq.common.sysflag.MessageSysFlag;
 
+/**
+ * 消息解码器
+ */
 public class MessageDecoder {
 //    public final static int MSG_ID_LENGTH = 8 + 8;
+    /**
+     * 字符集
+     */
 
     public final static Charset CHARSET_UTF8 = StandardCharsets.UTF_8;
     public final static int MESSAGE_MAGIC_CODE_POSITION = 4;
@@ -47,6 +53,9 @@ public class MessageDecoder {
     public static final char PROPERTY_SEPARATOR = 2;
     public static final int PHY_POS_POSITION = 4 + 4 + 4 + 4 + 4 + 8;
     public static final int QUEUE_OFFSET_POSITION = 4 + 4 + 4 + 4 + 4;
+    /**
+     * sysFlag 的 偏移量
+     */
     public static final int SYSFLAG_POSITION = 4 + 4 + 4 + 4 + 4 + 8 + 8;
 //    public static final int BODY_SIZE_POSITION = 4 // 1 TOTALSIZE
 //        + 4 // 2 MAGICCODE
@@ -85,6 +94,12 @@ public class MessageDecoder {
         return UtilAll.bytes2string(byteBuffer.array());
     }
 
+    /**
+     * 解码 msgId (ip+port)+offset
+     * @param msgId
+     * @return
+     * @throws UnknownHostException
+     */
     public static MessageId decodeMessageId(final String msgId) throws UnknownHostException {
         byte[] bytes = UtilAll.string2bytes(msgId);
         ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
@@ -723,6 +738,12 @@ public class MessageDecoder {
         return msgs;
     }
 
+    /**
+     * 对消进行解码 添加到  list
+     * @param messageExt
+     * @param list
+     * @throws Exception
+     */
     public static void decodeMessage(MessageExt messageExt, List<MessageExt> list) throws Exception {
         List<Message> messages = MessageDecoder.decodeMessages(ByteBuffer.wrap(messageExt.getBody()));
         for (int i = 0; i < messages.size(); i++) {

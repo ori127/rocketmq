@@ -30,18 +30,27 @@ public class MessageSysFlag {
      * | byte 3 |   |   |           |          |             |                  |                  |                  |
      * | byte 4 |   |   |           |          |             |                  |                  |                  |
      */
+    // 0 bit 表示 压缩标志
     public final static int COMPRESSED_FLAG = 0x1;
+    // 1 bit 多个 tag 过滤
     public final static int MULTI_TAGS_FLAG = 0x1 << 1;
+
     public final static int TRANSACTION_NOT_TYPE = 0;
+
+    // 2 bit - 4bit 表示 事务标志
     public final static int TRANSACTION_PREPARED_TYPE = 0x1 << 2;
     public final static int TRANSACTION_COMMIT_TYPE = 0x2 << 2;
     public final static int TRANSACTION_ROLLBACK_TYPE = 0x3 << 2;
+
     public final static int BORNHOST_V6_FLAG = 0x1 << 4;
     public final static int STOREHOSTADDRESS_V6_FLAG = 0x1 << 5;
     //Mark the flag for batch to avoid conflict
     public final static int NEED_UNWRAP_FLAG = 0x1 << 6;
+    /**
+     * INNER_BATCH_FLAG
+     */
     public final static int INNER_BATCH_FLAG = 0x1 << 7;
-
+    // 8 bit 表示 压缩类型
     // COMPRESSION_TYPE
     public final static int COMPRESSION_LZ4_TYPE = 0x1 << 8;
     public final static int COMPRESSION_ZSTD_TYPE = 0x2 << 8;

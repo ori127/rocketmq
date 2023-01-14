@@ -42,7 +42,13 @@ import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 public class RegisterBrokerBody extends RemotingSerializable {
 
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
+    /**
+     *  topic配置 和 映射管理
+     */
     private TopicConfigAndMappingSerializeWrapper topicConfigSerializeWrapper = new TopicConfigAndMappingSerializeWrapper();
+    /**
+     * 过滤服务
+     */
     private List<String> filterServerList = new ArrayList<String>();
 
     public byte[] encode(boolean compress) {
@@ -111,23 +117,27 @@ public class RegisterBrokerBody extends RemotingSerializable {
     }
 
     public static RegisterBrokerBody decode(byte[] data, boolean compressed) throws IOException {
+        //如果没有压缩 则直接解码
         if (!compressed) {
             return RegisterBrokerBody.decode(data, RegisterBrokerBody.class);
         }
         long start = System.currentTimeMillis();
         InflaterInputStream inflaterInputStream = new InflaterInputStream(new ByteArrayInputStream(data));
+        //版本信息长度
         int dataVersionLength = readInt(inflaterInputStream);
+        //版本信息
         byte[] dataVersionBytes = readBytes(inflaterInputStream, dataVersionLength);
         DataVersion dataVersion = DataVersion.decode(dataVersionBytes, DataVersion.class);
-
+        //设置版本
         RegisterBrokerBody registerBrokerBody = new RegisterBrokerBody();
         registerBrokerBody.getTopicConfigSerializeWrapper().setDataVersion(dataVersion);
         ConcurrentMap<String, TopicConfig> topicConfigTable = registerBrokerBody.getTopicConfigSerializeWrapper().getTopicConfigTable();
-
+        //读取 topicConfig 数量
         int topicConfigNumber = readInt(inflaterInputStream);
         LOGGER.debug("{} topic configs to extract", topicConfigNumber);
-
+        //生成 topicConfigTable
         for (int i = 0; i < topicConfigNumber; i++) {
+            //topicConfig 的 json 长度
             int topicConfigJsonLength = readInt(inflaterInputStream);
 
             byte[] buffer = readBytes(inflaterInputStream, topicConfigJsonLength);
@@ -136,12 +146,13 @@ public class RegisterBrokerBody extends RemotingSerializable {
             topicConfig.decode(topicConfigJson);
             topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
         }
-
+        //filterServer 的 json 长度
         int filterServerListJsonLength = readInt(inflaterInputStream);
 
         byte[] filterServerListBuffer = readBytes(inflaterInputStream, filterServerListJsonLength);
         String filterServerListJson = new String(filterServerListBuffer, MixAll.DEFAULT_CHARSET);
         List<String> filterServerList = new ArrayList<String>();
+        //生成 filterServerList
         try {
             filterServerList = JSON.parseArray(filterServerListJson, String.class);
         } catch (Exception e) {
@@ -152,6 +163,7 @@ public class RegisterBrokerBody extends RemotingSerializable {
 
         int topicQueueMappingNum =  readInt(inflaterInputStream);
         Map<String/* topic */, TopicQueueMappingInfo> topicQueueMappingInfoMap = new ConcurrentHashMap<String, TopicQueueMappingInfo>();
+        //生成 TopicQueueMappingInfo
         for (int i = 0; i < topicQueueMappingNum; i++) {
             int mappingJsonLen = readInt(inflaterInputStream);
             byte[] buffer = readBytes(inflaterInputStream, mappingJsonLen);

@@ -37,10 +37,17 @@ public class ResponseCode extends RemotingSysResponseCode {
 
     public static final int TOPIC_NOT_EXIST = 17;
     public static final int TOPIC_EXIST_ALREADY = 18;
+    /**
+     * 获取消息没有找到
+     */
     public static final int PULL_NOT_FOUND = 19;
-
+    /**
+     * 获取消息立即重试
+     */
     public static final int PULL_RETRY_IMMEDIATELY = 20;
-
+    /**
+     * 获取消息偏移量 已经发生改动
+     */
     public static final int PULL_OFFSET_MOVED = 21;
 
     public static final int QUERY_NOT_FOUND = 22;
@@ -96,6 +103,7 @@ public class ResponseCode extends RemotingSysResponseCode {
 
     public static final int RPC_UNKNOWN = -1000;
     public static final int RPC_ADDR_IS_NULL = -1002;
+
     public static final int RPC_SEND_TO_CHANNEL_FAILED = -1004;
     public static final int RPC_TIME_OUT = -1006;
 

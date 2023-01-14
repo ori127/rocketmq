@@ -41,6 +41,7 @@ public class TlsSystemConfig {
 
 
     /**
+     * 是否使用 ssl
      * To determine whether use SSL in client-side, include SDK client and BrokerOuterAPI
      */
     public static boolean tlsEnable = Boolean.parseBoolean(System.getProperty(TLS_ENABLE, "false"));

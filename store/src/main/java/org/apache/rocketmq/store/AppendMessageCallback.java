@@ -21,11 +21,13 @@ import org.apache.rocketmq.common.message.MessageExtBatch;
 import org.apache.rocketmq.common.message.MessageExtBrokerInner;
 
 /**
+ * 写消息回调 接口
  * Write messages callback interface
  */
 public interface AppendMessageCallback {
 
     /**
+     * 消息序列化后，写 MapedByteBuffer
      * After message serialization, write MapedByteBuffer
      *
      * @return How many bytes to write
@@ -34,6 +36,7 @@ public interface AppendMessageCallback {
         final int maxBlank, final MessageExtBrokerInner msg, PutMessageContext putMessageContext);
 
     /**
+     * 消息序列化后，写 MapedByteBuffer
      * After batched message serialization, write MapedByteBuffer
      *
      * @param messageExtBatch, backed up by a byte array

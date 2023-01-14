@@ -18,5 +18,8 @@
 package org.apache.rocketmq.store.ha.io;
 
 public interface HAWriteHook {
+    /**
+     * @param writeSize 写入字节的数量
+     */
     void afterWrite(int writeSize);
 }

@@ -30,6 +30,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class RebalanceLockManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.REBALANCE_LOCK_LOGGER_NAME);
+    /**
+     * 上锁最大时间
+     */
     private final static long REBALANCE_LOCK_MAX_LIVE_TIME = Long.parseLong(System.getProperty(
         "rocketmq.broker.rebalance.lockMaxLiveTime", "60000"));
     private final Lock lock = new ReentrantLock();
@@ -229,7 +232,13 @@ public class RebalanceLockManager {
     }
 
     static class LockEntry {
+        /**
+         * 客户端 id
+         */
         private String clientId;
+        /**
+         * 最近修改时间
+         */
         private volatile long lastUpdateTimestamp = System.currentTimeMillis();
 
         public String getClientId() {
@@ -248,12 +257,22 @@ public class RebalanceLockManager {
             this.lastUpdateTimestamp = lastUpdateTimestamp;
         }
 
+        /**
+         * 是否上锁 客户端 id 是否相等 是否超过最大上锁 时间
+         * @param clientId
+         * @return
+         */
         public boolean isLocked(final String clientId) {
             boolean eq = this.clientId.equals(clientId);
             return eq && !this.isExpired();
         }
 
+        /**
+         * 锁是是否已经失效
+         * @return
+         */
         public boolean isExpired() {
+            //锁超过最大上锁时间
             boolean expired =
                 (System.currentTimeMillis() - this.lastUpdateTimestamp) > REBALANCE_LOCK_MAX_LIVE_TIME;
 

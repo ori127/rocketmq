@@ -21,14 +21,20 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * 过滤工厂
  * Filter factory: support other filter to register.
  */
 public class FilterFactory {
 
     public static final FilterFactory INSTANCE = new FilterFactory();
-
+    /**
+     * key 为 过滤类型, value为 对应 FilterSpi
+     */
     protected static final Map<String, FilterSpi> FILTER_SPI_HOLDER = new HashMap<String, FilterSpi>(4);
 
+    /**
+     * 注册SQL过滤
+     */
     static {
         FilterFactory.INSTANCE.register(new SqlFilter());
     }

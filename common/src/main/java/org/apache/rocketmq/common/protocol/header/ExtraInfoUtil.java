@@ -28,6 +28,11 @@ public class ExtraInfoUtil {
     private static final String NORMAL_TOPIC = "0";
     private static final String RETRY_TOPIC = "1";
 
+    /**
+     * 用 " " 进行分割
+     * @param extraInfo
+     * @return
+     */
     public static String[] split(String extraInfo) {
         if (extraInfo == null) {
             throw new IllegalArgumentException("split extraInfo is null");
@@ -42,13 +47,22 @@ public class ExtraInfoUtil {
         return Long.valueOf(extraInfoStrs[0]);
     }
 
+    /**
+     * extraInfoStrs[1] 为 PopTime
+     * @param extraInfoStrs
+     * @return
+     */
     public static Long getPopTime(String[] extraInfoStrs) {
         if (extraInfoStrs == null || extraInfoStrs.length < 2) {
             throw new IllegalArgumentException("getPopTime fail, extraInfoStrs length " + (extraInfoStrs == null ? 0 : extraInfoStrs.length));
         }
         return Long.valueOf(extraInfoStrs[1]);
     }
-
+    /**
+     * extraInfoStrs[2] 为 InvisibleTime
+     * @param extraInfoStrs
+     * @return
+     */
     public static Long getInvisibleTime(String[] extraInfoStrs) {
         if (extraInfoStrs == null || extraInfoStrs.length < 3) {
             throw new IllegalArgumentException("getInvisibleTime fail, extraInfoStrs length " + (extraInfoStrs == null ? 0 : extraInfoStrs.length));
@@ -63,10 +77,18 @@ public class ExtraInfoUtil {
         return Integer.parseInt(extraInfoStrs[3]);
     }
 
+    /**
+     * 先判断 topic类型 如果是 重试 topic 那就  构建成 重试  %RETRY%topic_cid
+     * @param extraInfoStrs
+     * @param topic
+     * @param cid
+     * @return
+     */
     public static String getRealTopic(String[] extraInfoStrs, String topic, String cid) {
         if (extraInfoStrs == null || extraInfoStrs.length < 5) {
             throw new IllegalArgumentException("getRealTopic fail, extraInfoStrs length " + (extraInfoStrs == null ? 0 : extraInfoStrs.length));
         }
+        //若果是
         if (RETRY_TOPIC.equals(extraInfoStrs[4])) {
             return KeyBuilder.buildPopRetryTopic(topic, cid);
         } else {
@@ -74,6 +96,11 @@ public class ExtraInfoUtil {
         }
     }
 
+    /**
+     * extraInfoStrs[5] 为 brokerName
+     * @param extraInfoStrs
+     * @return
+     */
     public static String getBrokerName(String[] extraInfoStrs) {
         if (extraInfoStrs == null || extraInfoStrs.length < 6) {
             throw new IllegalArgumentException("getBrokerName fail, extraInfoStrs length " + (extraInfoStrs == null ? 0 : extraInfoStrs.length));
@@ -81,6 +108,11 @@ public class ExtraInfoUtil {
         return extraInfoStrs[5];
     }
 
+    /**
+     * extraInfoStrs[6] 为 QueueId
+     * @param extraInfoStrs
+     * @return
+     */
     public static int getQueueId(String[] extraInfoStrs) {
         if (extraInfoStrs == null || extraInfoStrs.length < 7) {
             throw new IllegalArgumentException("getQueueId fail, extraInfoStrs length " + (extraInfoStrs == null ? 0 : extraInfoStrs.length));
@@ -88,6 +120,11 @@ public class ExtraInfoUtil {
         return Integer.parseInt(extraInfoStrs[6]);
     }
 
+    /**
+     * extraInfoStrs[7] 为 QueueOffset
+     * @param extraInfoStrs
+     * @return
+     */
     public static long getQueueOffset(String[] extraInfoStrs) {
         if (extraInfoStrs == null || extraInfoStrs.length < 8) {
             throw new IllegalArgumentException("getQueueOffset fail, extraInfoStrs length " + (extraInfoStrs == null ? 0 : extraInfoStrs.length));
@@ -95,6 +132,17 @@ public class ExtraInfoUtil {
         return Long.parseLong(extraInfoStrs[7]);
     }
 
+    /**
+     * 构建额外信息
+     * @param ckQueueOffset
+     * @param popTime
+     * @param invisibleTime
+     * @param reviveQid
+     * @param topic
+     * @param brokerName
+     * @param queueId
+     * @return
+     */
     public static String buildExtraInfo(long ckQueueOffset, long popTime, long invisibleTime, int reviveQid, String topic, String brokerName, int queueId) {
         String t = NORMAL_TOPIC;
         if (topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
@@ -252,6 +300,12 @@ public class ExtraInfoUtil {
         return startOffsetMap;
     }
 
+    /**
+     * 如果topic 以 %RETRY% 为开始 返回 "1@queueId" 否则 "0@queueId"
+     * @param topic
+     * @param queueId
+     * @return
+     */
     public static String getStartOffsetInfoMapKey(String topic, int queueId) {
         return (topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX) ? RETRY_TOPIC : NORMAL_TOPIC) + "@" + queueId;
     }

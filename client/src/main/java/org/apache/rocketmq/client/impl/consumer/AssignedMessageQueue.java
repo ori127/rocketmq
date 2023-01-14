@@ -41,6 +41,11 @@ public class AssignedMessageQueue {
         return assignedMessageQueueState.keySet();
     }
 
+    /**
+     * 判断该消息队列是否暂停
+     * @param messageQueue
+     * @return
+     */
     public boolean isPaused(MessageQueue messageQueue) {
         MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
         if (messageQueueState != null) {
@@ -48,7 +53,10 @@ public class AssignedMessageQueue {
         }
         return true;
     }
-
+    /**
+     * 将 该消息队列集合 的消息状态 暂停
+     * @param messageQueues
+     */
     public void pause(Collection<MessageQueue> messageQueues) {
         for (MessageQueue messageQueue : messageQueues) {
             MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
@@ -58,6 +66,10 @@ public class AssignedMessageQueue {
         }
     }
 
+    /**
+     * 将 该消息队列集合 的消息状态 重新恢复
+     * @param messageQueueCollection
+     */
     public void resume(Collection<MessageQueue> messageQueueCollection) {
         for (MessageQueue messageQueue : messageQueueCollection) {
             MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
@@ -67,6 +79,11 @@ public class AssignedMessageQueue {
         }
     }
 
+    /**
+     * 获取处理队列
+     * @param messageQueue
+     * @return
+     */
     public ProcessQueue getProcessQueue(MessageQueue messageQueue) {
         MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
         if (messageQueueState != null) {
@@ -74,7 +91,10 @@ public class AssignedMessageQueue {
         }
         return null;
     }
-
+    /**
+     * 获取消息队列获取消息偏移量
+     * @param messageQueue
+     */
     public long getPullOffset(MessageQueue messageQueue) {
         MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
         if (messageQueueState != null) {
@@ -83,6 +103,12 @@ public class AssignedMessageQueue {
         return -1;
     }
 
+    /**
+     * 更新消息队列获取消息偏移量
+     * @param messageQueue
+     * @param offset
+     * @param processQueue
+     */
     public void updatePullOffset(MessageQueue messageQueue, long offset, ProcessQueue processQueue) {
         MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
         if (messageQueueState != null) {
@@ -93,6 +119,11 @@ public class AssignedMessageQueue {
         }
     }
 
+    /**
+     * 获取消息队列 消费偏移量
+     * @param messageQueue
+     * @return
+     */
     public long getConsumerOffset(MessageQueue messageQueue) {
         MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
         if (messageQueueState != null) {
@@ -101,6 +132,11 @@ public class AssignedMessageQueue {
         return -1;
     }
 
+    /**
+     * 更新消费队列的消费偏移量
+     * @param messageQueue
+     * @param offset
+     */
     public void updateConsumeOffset(MessageQueue messageQueue, long offset) {
         MessageQueueState messageQueueState = assignedMessageQueueState.get(messageQueue);
         if (messageQueueState != null) {
@@ -123,7 +159,14 @@ public class AssignedMessageQueue {
         return -1;
     }
 
+    /**
+     * 遍历 assignedMessageQueueState 将 topic 下 不在 assigned 标记丢弃 进行移除
+     * 将 assigned 中 消息队列 添加 到 assignedMessageQueueState
+     * @param topic
+     * @param assigned
+     */
     public void updateAssignedMessageQueue(String topic, Collection<MessageQueue> assigned) {
+        //遍历 assignedMessageQueueState 将 topic 下 不在 assigned 标记丢弃 进行移除
         synchronized (this.assignedMessageQueueState) {
             Iterator<Map.Entry<MessageQueue, MessageQueueState>> it = this.assignedMessageQueueState.entrySet().iterator();
             while (it.hasNext()) {
@@ -135,10 +178,15 @@ public class AssignedMessageQueue {
                     }
                 }
             }
+            //将 assigned 中 消息队列 添加 到 assignedMessageQueueState
             addAssignedMessageQueue(assigned);
         }
     }
-
+    /**
+     * 遍历 assignedMessageQueueState  不在 assigned 标记丢弃 进行移除
+     * 将 assigned 中 消息队列 添加 到 assignedMessageQueueState
+     * @param assigned
+     */
     public void updateAssignedMessageQueue(Collection<MessageQueue> assigned) {
         synchronized (this.assignedMessageQueueState) {
             Iterator<Map.Entry<MessageQueue, MessageQueueState>> it = this.assignedMessageQueueState.entrySet().iterator();
@@ -153,7 +201,12 @@ public class AssignedMessageQueue {
         }
     }
 
+    /**
+     * 遍历 assigned 将 消息队列 添加 到 assignedMessageQueueState 中
+     * @param assigned
+     */
     private void addAssignedMessageQueue(Collection<MessageQueue> assigned) {
+        //遍历 assigned 将 消息队列 添加 到 assignedMessageQueueState 中
         for (MessageQueue messageQueue : assigned) {
             if (!this.assignedMessageQueueState.containsKey(messageQueue)) {
                 MessageQueueState messageQueueState;
@@ -168,6 +221,10 @@ public class AssignedMessageQueue {
         }
     }
 
+    /**
+     * 遍历 assignedMessageQueueState 移除 该 topic 下的消息 队列
+     * @param topic
+     */
     public void removeAssignedMessageQueue(String topic) {
         synchronized (this.assignedMessageQueueState) {
             Iterator<Map.Entry<MessageQueue, MessageQueueState>> it = this.assignedMessageQueueState.entrySet().iterator();
@@ -185,10 +242,25 @@ public class AssignedMessageQueue {
     }
 
     private class MessageQueueState {
+        /**
+         * 消息队列
+         */
         private MessageQueue messageQueue;
+        /**
+         * 处理队列
+         */
         private ProcessQueue processQueue;
+        /**
+         * 暂停标志
+         */
         private volatile boolean paused = false;
+        /**
+         * 获取消息偏移量
+         */
         private volatile long pullOffset = -1;
+        /**
+         * 消费偏移量
+         */
         private volatile long consumeOffset = -1;
         private volatile long seekOffset = -1;
 

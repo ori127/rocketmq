@@ -27,11 +27,26 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class ConsumerConnection extends RemotingSerializable {
+    /**
+     * 连接 结合
+     */
     private HashSet<Connection> connectionSet = new HashSet<Connection>();
+    /**
+     * key 为 Topic, value 为订阅
+     */
     private ConcurrentMap<String/* Topic */, SubscriptionData> subscriptionTable =
         new ConcurrentHashMap<String, SubscriptionData>();
+    /**
+     * 消费方式
+     */
     private ConsumeType consumeType;
+    /**
+     * 消息模式
+     */
     private MessageModel messageModel;
+    /**
+     * 消费点位
+     */
     private ConsumeFromWhere consumeFromWhere;
 
     public int computeMinVersion() {

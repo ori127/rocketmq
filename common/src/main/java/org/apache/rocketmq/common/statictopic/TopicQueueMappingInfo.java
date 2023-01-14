@@ -39,10 +39,18 @@ import java.util.concurrent.ConcurrentMap;
 
 public class TopicQueueMappingInfo extends RemotingSerializable {
     public static final int LEVEL_0 = 0;
-
+    /**
+     * topic
+     */
     String topic; // redundant field
     String scope = MixAll.METADATA_SCOPE_GLOBAL;
+    /**
+     * 总共队列数量
+     */
     int totalQueues;
+    /**
+     *  brokerName
+     */
     String bname;  //identify the hosted broker name
     long epoch; //important to fence the old dirty data
     boolean dirty; //indicate if the data is dirty

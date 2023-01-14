@@ -52,7 +52,7 @@ import org.apache.rocketmq.broker.client.ProducerManager;
 import org.apache.rocketmq.broker.client.net.Broker2Client;
 import org.apache.rocketmq.broker.client.rebalance.RebalanceLockManager;
 import org.apache.rocketmq.broker.dledger.DLedgerRoleChangeHandler;
-import org.apache.rocketmq.broker.failover.EscapeBridge;
+import org.apache.rocketmq.broker.filter.failover.EscapeBridge;
 import org.apache.rocketmq.broker.filter.CommitLogDispatcherCalcBitMap;
 import org.apache.rocketmq.broker.filter.ConsumerFilterManager;
 import org.apache.rocketmq.broker.filtersrv.FilterServerManager;
@@ -164,6 +164,9 @@ public class BrokerController {
     protected final BrokerConfig brokerConfig;
     private final NettyServerConfig nettyServerConfig;
     private final NettyClientConfig nettyClientConfig;
+    /**
+     * Message存储配置
+     */
     protected final MessageStoreConfig messageStoreConfig;
     protected final ConsumerOffsetManager consumerOffsetManager;
     protected final ConsumerManager consumerManager;
@@ -213,6 +216,7 @@ public class BrokerController {
     protected final BrokerStatsManager brokerStatsManager;
     protected final List<SendMessageHook> sendMessageHookList = new ArrayList<SendMessageHook>();
     protected final List<ConsumeMessageHook> consumeMessageHookList = new ArrayList<ConsumeMessageHook>();
+
     protected MessageStore messageStore;
     protected RemotingServer remotingServer;
     protected CountDownLatch remotingServerStartLatch;
@@ -254,6 +258,9 @@ public class BrokerController {
     protected List<BrokerAttachedPlugin> brokerAttachedPlugins = new ArrayList<>();
     protected volatile long shouldStartTime;
     private BrokerPreOnlineService brokerPreOnlineService;
+    /**
+     * 是否孤立
+     */
     protected volatile boolean isIsolated = false;
     protected volatile long minBrokerIdInGroup = 0;
     protected volatile String minBrokerAddrInGroup = null;
@@ -1409,6 +1416,10 @@ public class BrokerController {
             this.brokerConfig.getBrokerId());
     }
 
+    /**
+     * broker ip 地址 ip+port
+     * @return
+     */
     public String getBrokerAddr() {
         return this.brokerConfig.getBrokerIP1() + ":" + this.nettyServerConfig.getListenPort();
     }
@@ -1596,10 +1607,12 @@ public class BrokerController {
 
         TopicConfigAndMappingSerializeWrapper topicConfigSerializeWrapper = new TopicConfigAndMappingSerializeWrapper();
         topicConfigSerializeWrapper.setDataVersion(dataVersion);
-
+        //遍历 topicConfigList  生产 topic => topicConfig 映射
         ConcurrentMap<String, TopicConfig> topicConfigTable = topicConfigList.stream()
             .map(topicConfig -> {
                 TopicConfig registerTopicConfig;
+                //如果 该 broker 权 限不可读不可写 则复制 名称 队列 broker权限 topic topicSysFlag 权限以 该 broker 的 权限
+                //如果 topic broker 权限不可读不可写 则直接复制 配置
                 if (!PermName.isWriteable(this.getBrokerConfig().getBrokerPermission())
                     || !PermName.isReadable(this.getBrokerConfig().getBrokerPermission())) {
                     registerTopicConfig =
@@ -1614,7 +1627,7 @@ public class BrokerController {
             })
             .collect(Collectors.toConcurrentMap(TopicConfig::getTopicName, Function.identity()));
         topicConfigSerializeWrapper.setTopicConfigTable(topicConfigTable);
-
+        //根据 topic 获取 TopicQueueMappingDetail 过滤不为 null 的  生成 topic => TopicQueueMappingInfo 映射
         Map<String, TopicQueueMappingInfo> topicQueueMappingInfoMap = topicConfigList.stream()
             .map(TopicConfig::getTopicName)
             .map(topicName -> Optional.ofNullable(this.topicQueueMappingManager.getTopicQueueMapping(topicName))
@@ -1622,10 +1635,11 @@ public class BrokerController {
                 .orElse(null))
             .filter(Objects::nonNull)
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        //如果不为 空 则设置 topicQueueMappingInfoMap
         if (!topicQueueMappingInfoMap.isEmpty()) {
             topicConfigSerializeWrapper.setTopicQueueMappingInfoMap(topicQueueMappingInfoMap);
         }
-
+        //遍历所有 nameServerAddressList 进行注册 Broker
         doRegisterBrokerAll(true, false, topicConfigSerializeWrapper);
     }
 
@@ -2011,6 +2025,10 @@ public class BrokerController {
         return topicQueueMappingManager;
     }
 
+    /**
+     * HAServerAddr brokerIp + storePort
+     * @return
+     */
     public String getHAServerAddr() {
         return this.brokerConfig.getBrokerIP2() + ":" + this.messageStoreConfig.getHaListenPort();
     }

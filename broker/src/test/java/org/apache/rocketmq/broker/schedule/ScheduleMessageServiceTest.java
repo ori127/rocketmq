@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.broker.BrokerController;
-import org.apache.rocketmq.broker.failover.EscapeBridge;
+import org.apache.rocketmq.broker.filter.failover.EscapeBridge;
 import org.apache.rocketmq.broker.util.HookUtils;
 import org.apache.rocketmq.common.BrokerConfig;
 import org.apache.rocketmq.common.UtilAll;

@@ -22,7 +22,9 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class ChangeInvisibleTimeResponseHeader implements CommandCustomHeader {
 
-
+    /**
+     * pop时间
+     */
     @CFNotNull
     private long popTime;
     @CFNotNull

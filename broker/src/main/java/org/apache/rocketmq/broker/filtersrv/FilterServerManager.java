@@ -37,13 +37,20 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 
 public class FilterServerManager {
-
+    /**
+     * 过滤服务最大空闲时间
+     */
     public static final long FILTER_SERVER_MAX_IDLE_TIME_MILLS = 30000;
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    /**
+     * 过滤服务信息
+     */
     private final ConcurrentMap<Channel, FilterServerInfo> filterServerTable =
         new ConcurrentHashMap<Channel, FilterServerInfo>(16);
     private final BrokerController brokerController;
-
+    /**
+     *  定时启动过滤服务 检查 过滤服务数量 是否是少于配置 数量  少就 启动过滤服务
+     */
     private ScheduledExecutorService scheduledExecutorService = Executors
         .newSingleThreadScheduledExecutor(new ThreadFactoryImpl("FilterServerManagerScheduledThread"));
 
@@ -51,6 +58,9 @@ public class FilterServerManager {
         this.brokerController = brokerController;
     }
 
+    /**
+     * 定时启动过滤服务 检查 过滤服务数量 是否是少于配置 数量  少就 启动过滤服务
+     */
     public void start() {
 
         this.scheduledExecutorService.scheduleAtFixedRate(new AbstractBrokerRunnable(brokerController.getBrokerConfig()) {
@@ -65,7 +75,11 @@ public class FilterServerManager {
         }, 1000 * 5, 1000 * 30, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * 创建过滤服务
+     */
     public void createFilterServer() {
+        //如果过滤服务 少于 配置过滤 服务 则 新启动过滤服务
         int more =
             this.brokerController.getBrokerConfig().getFilterServerNums() - this.filterServerTable.size();
         String cmd = this.buildStartCommand();
@@ -74,12 +88,17 @@ public class FilterServerManager {
         }
     }
 
+    /**
+     * 构建启动过滤服务命令
+     * @return
+     */
     private String buildStartCommand() {
         String config = "";
+        //设定配置文件
         if (BrokerStartup.configFile != null) {
             config = String.format("-c %s", BrokerStartup.configFile);
         }
-
+        //设置 NamesrvAddr 信息
         if (this.brokerController.getBrokerConfig().getNamesrvAddr() != null) {
             config += String.format(" -n %s", this.brokerController.getBrokerConfig().getNamesrvAddr());
         }
@@ -99,6 +118,11 @@ public class FilterServerManager {
         this.scheduledExecutorService.shutdown();
     }
 
+    /**
+     * 注册过滤服务 如果已经存在 则更新 修改 时间 否则 进行创建映射
+     * @param channel
+     * @param filterServerAddr
+     */
     public void registerFilterServer(final Channel channel, final String filterServerAddr) {
         FilterServerInfo filterServerInfo = this.filterServerTable.get(channel);
         if (filterServerInfo != null) {
@@ -112,8 +136,11 @@ public class FilterServerManager {
         }
     }
 
+    /**
+     * 遍历过滤服务 超过空闲时间 进行关闭
+     */
     public void scanNotActiveChannel() {
-
+        //遍历过滤服务 超过空闲时间 进行关闭
         Iterator<Entry<Channel, FilterServerInfo>> it = this.filterServerTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<Channel, FilterServerInfo> next = it.next();
@@ -127,6 +154,11 @@ public class FilterServerManager {
         }
     }
 
+    /**
+     * 移除 Channel 过滤 服务信息
+     * @param remoteAddr
+     * @param channel
+     */
     public void doChannelCloseEvent(final String remoteAddr, final Channel channel) {
         FilterServerInfo old = this.filterServerTable.remove(channel);
         if (old != null) {
@@ -135,6 +167,10 @@ public class FilterServerManager {
         }
     }
 
+    /**
+     * 获取过滤服务列表
+     * @return
+     */
     public List<String> buildNewFilterServerList() {
         List<String> addr = new ArrayList<>();
         Iterator<Entry<Channel, FilterServerInfo>> it = this.filterServerTable.entrySet().iterator();
@@ -146,7 +182,13 @@ public class FilterServerManager {
     }
 
     static class FilterServerInfo {
+        /**
+         * 过滤服务地址
+         */
         private String filterServerAddr;
+        /**
+         * 最近时间
+         */
         private long lastUpdateTimestamp;
 
         public String getFilterServerAddr() {

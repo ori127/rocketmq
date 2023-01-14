@@ -22,9 +22,15 @@ import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 import java.util.Map;
 
 public class ClusterAclVersionInfo extends RemotingSerializable {
+    /**
+     * broker名称
+     */
 
     private String brokerName;
 
+    /**
+     * broker 地址
+     */
     private String brokerAddr;
 
     @Deprecated

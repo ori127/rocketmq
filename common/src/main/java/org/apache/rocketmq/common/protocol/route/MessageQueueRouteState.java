@@ -18,9 +18,21 @@ package org.apache.rocketmq.common.protocol.route;
 
 public enum MessageQueueRouteState {
     // do not change below order, since ordinal() is used
+    /**
+     * 过期
+     */
     Expired,
+    /**
+     * 只读
+     */
     ReadOnly,
+    /**
+     * 正常
+     */
     Normal,
+    /**
+     * 只写
+     */
     WriteOnly,
     ;
 }

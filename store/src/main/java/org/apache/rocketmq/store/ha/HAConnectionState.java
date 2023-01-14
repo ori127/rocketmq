@@ -27,14 +27,17 @@ public enum HAConnectionState {
      */
     HANDSHAKE,
     /**
+     * 同步传输数据
      * Synchronizing data.
      */
     TRANSFER,
     /**
+     *暂时停止传输
      * Temporarily stop transferring.
      */
     SUSPEND,
     /**
+     * 连接关闭
      * Connection shutdown.
      */
     SHUTDOWN,

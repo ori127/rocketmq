@@ -27,6 +27,9 @@ import java.util.Arrays;
 public class BloomFilterData {
 
     private int[] bitPos;
+    /**
+     * 总bit 位数
+     */
     private int bitNum;
 
     public BloomFilterData() {

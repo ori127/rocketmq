@@ -31,25 +31,49 @@ import org.apache.rocketmq.remoting.protocol.LanguageCode;
 import org.apache.rocketmq.remoting.protocol.RequestType;
 
 /**
+ * 客户端公共配置
  * Client Common configuration
  */
 public class ClientConfig {
     public static final String SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY = "com.rocketmq.sendMessageWithVIPChannel";
     public static final String DECODE_READ_BODY = "com.rocketmq.read.body";
     public static final String DECODE_DECOMPRESS_BODY = "com.rocketmq.decompress.body";
+    /**
+     * NameServer 地址
+     */
     private String namesrvAddr = NameServerAddressUtils.getNameServerAddresses();
+    /**
+     * 客户端ip
+     */
     private String clientIP = RemotingUtil.getLocalAddress();
+    /**
+     * 实例名称
+     */
     private String instanceName = System.getProperty("rocketmq.client.name", "DEFAULT");
+    /**
+     * 客户端回调时 执行的 线程数量
+     */
     private int clientCallbackExecutorThreads = Runtime.getRuntime().availableProcessors();
+    /**
+     * namesrvAddr  生成者实例id
+     */
     protected String namespace;
+    /**
+     *  namespace 是否已经初始化
+     */
     private boolean namespaceInitialized = false;
+    /**
+     * 访问方式
+     */
     protected AccessChannel accessChannel = AccessChannel.LOCAL;
 
     /**
+     * 从 namedServer 获取topic路由信息 的间隔时间
      * Pulling topic information interval from the named server
      */
     private int pollNameServerInterval = 1000 * 30;
     /**
+     * 心跳发送时间
      * Heartbeat interval in microseconds with message broker
      */
     private int heartbeatBrokerInterval = 1000 * 30;
@@ -62,8 +86,13 @@ public class ClientConfig {
     private String unitName;
     private boolean decodeReadBody = Boolean.parseBoolean(System.getProperty(DECODE_READ_BODY, "true"));
     private boolean decodeDecompressBody = Boolean.parseBoolean(System.getProperty(DECODE_DECOMPRESS_BODY, "true"));
+    /**
+     * 启用vip 通道  vip端口为原端口-2
+     */
     private boolean vipChannelEnabled = Boolean.parseBoolean(System.getProperty(SEND_MESSAGE_WITH_VIP_CHANNEL_PROPERTY, "false"));
-
+    /**
+     * 是否使用 ssl
+     */
     private boolean useTLS = TlsSystemConfig.tlsEnable;
 
     private int mqClientApiTimeout = 3 * 1000;
@@ -76,6 +105,10 @@ public class ClientConfig {
      */
     protected boolean enableStreamRequestType = false;
 
+    /**
+     * 构建客户端Id ip@instanceName[pid#System.nanoTime()]@unitName@RequestType.STREAM
+     * @return
+     */
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
         sb.append(this.getClientIP());
@@ -111,6 +144,9 @@ public class ClientConfig {
         this.instanceName = instanceName;
     }
 
+    /**
+     * 如果实例名称是DEFAULT 则将其改成 Pid#System.nanoTime()
+     */
     public void changeInstanceNameToPID() {
         if (this.instanceName.equals("DEFAULT")) {
             this.instanceName = UtilAll.getPid() + "#" + System.nanoTime();
@@ -141,6 +177,11 @@ public class ClientConfig {
         return resourceWithoutNamespace;
     }
 
+    /**
+     * 将 MessageQueue 的 topic 添加上 nameSpace 不会修改 原集合内的 topic
+     * @param queue
+     * @return
+     */
     public MessageQueue queueWithNamespace(MessageQueue queue) {
         if (StringUtils.isEmpty(this.getNamespace())) {
             return queue;
@@ -148,6 +189,11 @@ public class ClientConfig {
         return new MessageQueue(withNamespace(queue.getTopic()), queue.getBrokerName(), queue.getQueueId());
     }
 
+    /**
+     * 将 MessageQueue 的 topic 添加上 nameSpace 会修改 原集合内的 topic
+     * @param queues
+     * @return
+     */
     public Collection<MessageQueue> queuesWithNamespace(Collection<MessageQueue> queues) {
         if (StringUtils.isEmpty(this.getNamespace())) {
             return queues;
@@ -204,6 +250,10 @@ public class ClientConfig {
         return cc;
     }
 
+    /**
+     * 获取nameserver 地址
+     * @return
+     */
     public String getNamesrvAddr() {
         if (StringUtils.isNotEmpty(namesrvAddr) && NameServerAddressUtils.NAMESRV_ENDPOINT_PATTERN.matcher(namesrvAddr.trim()).matches()) {
             return NameServerAddressUtils.getNameSrvAddrFromNamesrvEndpoint(namesrvAddr);
@@ -317,6 +367,10 @@ public class ClientConfig {
         this.decodeDecompressBody = decodeDecompressBody;
     }
 
+    /**
+     * 获取 namespace namesrvAddr的实例Id
+     * @return
+     */
     public String getNamespace() {
         if (namespaceInitialized) {
             return namespace;
@@ -325,7 +379,7 @@ public class ClientConfig {
         if (StringUtils.isNotEmpty(namespace)) {
             return namespace;
         }
-
+        //从namesrvAddr 解析 InstanceId
         if (StringUtils.isNotEmpty(this.namesrvAddr)) {
             if (NameServerAddressUtils.validateInstanceEndpoint(namesrvAddr)) {
                 namespace = NameServerAddressUtils.parseInstanceIdFromEndpoint(namesrvAddr);

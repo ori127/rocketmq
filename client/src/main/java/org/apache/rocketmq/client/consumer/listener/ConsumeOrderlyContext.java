@@ -19,6 +19,7 @@ package org.apache.rocketmq.client.consumer.listener;
 import org.apache.rocketmq.common.message.MessageQueue;
 
 /**
+ * 顺序消费的 context
  * Consumer Orderly consumption context
  */
 public class ConsumeOrderlyContext {

@@ -27,9 +27,14 @@ public abstract class ConfigManager {
 
     public abstract String encode();
 
+    /**
+     * 根据配置文件路径 获取 配置json  然后 子类进行 解码
+     * @return
+     */
     public boolean load() {
         String fileName = null;
         try {
+            //根据配置文件路径 获取 配置json  然后 子类进行 解码
             fileName = this.configFilePath();
             String jsonString = MixAll.file2String(fileName);
 
@@ -78,6 +83,9 @@ public abstract class ConfigManager {
         this.persist();
     }
 
+    /**
+     * 将配置信息 转成 json 文件进行 保存
+     */
     public synchronized void persist() {
         String jsonString = this.encode(true);
         if (jsonString != null) {

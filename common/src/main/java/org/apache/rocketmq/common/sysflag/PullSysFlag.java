@@ -17,9 +17,21 @@
 package org.apache.rocketmq.common.sysflag;
 
 public class PullSysFlag {
+    /**
+     * 0 bit 偏移量
+     */
     private final static int FLAG_COMMIT_OFFSET = 0x1;
+    /**
+     * 1 bit 是否暂停
+     */
     private final static int FLAG_SUSPEND = 0x1 << 1;
+    /**
+     * 2 bit 订阅标记
+     */
     private final static int FLAG_SUBSCRIPTION = 0x1 << 2;
+    /**
+     * 3 bit 类过滤
+     */
     private final static int FLAG_CLASS_FILTER = 0x1 << 3;
     private final static int FLAG_LITE_PULL_MESSAGE = 0x1 << 4;
 

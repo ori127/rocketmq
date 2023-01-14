@@ -18,9 +18,21 @@ package org.apache.rocketmq.common;
 
 import com.google.common.base.Objects;
 
+/**
+ * TopicQueueId
+ */
 public class TopicQueueId {
+    /**
+     * topic 名称
+     */
     private final String topic;
+    /**
+     * 队列id
+     */
     private final int queueId;
+    /**
+     * TopicQueueId 的 hash 值 方便 快速定位 ,因为 topic 和 queueId 不会改变 不用每次 重新 计算 hash
+     */
 
     private final int hash;
 

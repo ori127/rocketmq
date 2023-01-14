@@ -24,8 +24,17 @@ public class PermName {
 
 
     public static final int PERM_PRIORITY = 0x1 << INDEX_PERM_PRIORITY;
+    /**
+     * 2 bit 表示 读  100
+     */
     public static final int PERM_READ = 0x1 << INDEX_PERM_READ;
+    /**
+     * 1 bit 表示 写 010
+     */
     public static final int PERM_WRITE = 0x1 << INDEX_PERM_WRITE;
+    /**
+     * 0 bit 表示 写 000 表示能继承
+     */
     public static final int PERM_INHERIT = 0x1 << INDEX_PERM_INHERIT;
 
     public static String perm2String(final int perm) {
@@ -45,10 +54,20 @@ public class PermName {
         return sb.toString();
     }
 
+    /**
+     * 判断是否具有可读权限
+     * @param perm
+     * @return
+     */
     public static boolean isReadable(final int perm) {
         return (perm & PERM_READ) == PERM_READ;
     }
 
+    /**
+     * 判断是否具有写权限
+     * @param perm
+     * @return
+     */
     public static boolean isWriteable(final int perm) {
         return (perm & PERM_WRITE) == PERM_WRITE;
     }

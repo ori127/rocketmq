@@ -47,16 +47,19 @@ public class EndTransactionTraceHookImpl implements EndTransactionHook {
     @Override
     public void endTransaction(EndTransactionContext context) {
         //if it is message trace data,then it doesn't recorded
+        //message 投递的消息 不是 traceTopicName
         if (context == null || context.getMessage().getTopic().startsWith(((AsyncTraceDispatcher) localDispatcher).getTraceTopicName())) {
             return;
         }
         Message msg = context.getMessage();
         //build the context content of TuxeTraceContext
+        //构建 TraceContext
         TraceContext tuxeContext = new TraceContext();
         tuxeContext.setTraceBeans(new ArrayList<TraceBean>(1));
         tuxeContext.setTraceType(TraceType.EndTransaction);
         tuxeContext.setGroupName(NamespaceUtil.withoutNamespace(context.getProducerGroup()));
         //build the data bean object of message trace
+        //构建 TraceBean
         TraceBean traceBean = new TraceBean();
         traceBean.setTopic(NamespaceUtil.withoutNamespace(context.getMessage().getTopic()));
         traceBean.setTags(context.getMessage().getTags());

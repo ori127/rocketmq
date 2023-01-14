@@ -26,11 +26,13 @@ import org.apache.rocketmq.filter.expression.MQFilterException;
 public interface FilterSpi {
 
     /**
+     * 编译
      * Compile.
      */
     Expression compile(final String expr) throws MQFilterException;
 
     /**
+     * 过滤类型
      * Which type.
      */
     String ofType();

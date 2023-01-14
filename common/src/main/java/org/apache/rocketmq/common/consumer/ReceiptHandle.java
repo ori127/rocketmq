@@ -24,14 +24,32 @@ import org.apache.rocketmq.common.message.MessageConst;
 
 public class ReceiptHandle {
     private static final String SEPARATOR = MessageConst.KEY_SEPARATOR;
+    /**
+     * 正常topic
+     */
     public static final String NORMAL_TOPIC = "0";
+    /**
+     * 重试topic
+     */
     public static final String RETRY_TOPIC = "1";
     private final long startOffset;
     private final long retrieveTime;
+    /**
+     * 不可见时间戳
+     */
     private final long invisibleTime;
+    /**
+     * 下次可见时间戳
+     */
     private final long nextVisibleTime;
     private final int reviveQueueId;
+    /**
+     * topic 类型
+     */
     private final String topicType;
+    /**
+     * broker 名称
+     */
     private final String brokerName;
     private final int queueId;
     private final long offset;

@@ -17,6 +17,7 @@
 package org.apache.rocketmq.broker.client;
 
 /**
+ * 生产者 改变监听器 监听生产者客户端 取消注册 或者 整个 生产组 取消注册
  * producer manager will call this listener when something happen
  * <p>
  * event type: {@link ProducerGroupEvent}

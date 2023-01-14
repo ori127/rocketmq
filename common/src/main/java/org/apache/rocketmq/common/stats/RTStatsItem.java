@@ -22,6 +22,7 @@ import org.apache.rocketmq.logging.InternalLogger;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
+ * 响应时间的统计
  * A StatItem for response time, the only difference between from StatsItem is it has a different log output.
  */
 public class RTStatsItem extends StatsItem {

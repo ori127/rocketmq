@@ -43,6 +43,9 @@ public class BatchConsumeQueue implements ConsumeQueueInterface, FileQueueLifeCy
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     //position 8, size 4, tagscode 8, storetime 8, msgBaseOffset 8, batchSize 2, compactedOffset 4, reserved 4
+    /**
+     * 消费队列存储 单月大小 46 个字节
+     */
     public static final int CQ_STORE_UNIT_SIZE = 46;
     public static final int MSG_STORE_TIME_OFFSET_INDEX = 20;
     public static final int MSG_BASE_OFFSET_INDEX = 28;
@@ -50,13 +53,30 @@ public class BatchConsumeQueue implements ConsumeQueueInterface, FileQueueLifeCy
     public static final int MSG_COMPACT_OFFSET_INDEX = 38;
     private static final int MSG_COMPACT_OFFSET_LENGTH = 4;
     public static final int INVALID_POS = -1;
+    /**
+     * 文件映射队列
+     */
     final MappedFileQueue mappedFileQueue;
     private final MessageStore messageStore;
+    /**
+     * topic
+     */
     private final String topic;
+    /**
+     * 消费队列 ID
+     */
     private final int queueId;
+    /**
+     * 64个字节
+     */
     private final ByteBuffer byteBufferItem;
-
+    /**
+     * 存储路径
+     */
     private final String storePath;
+    /**
+     * 文件映射大小
+     */
     private final int mappedFileSize;
     private volatile long maxMsgPhyOffsetInCommitLog = -1;
 
@@ -64,6 +84,9 @@ public class BatchConsumeQueue implements ConsumeQueueInterface, FileQueueLifeCy
 
     private volatile long maxOffsetInQueue = 0;
     private volatile long minOffsetInQueue = -1;
+    /**
+     * 提交日志大小
+     */
     private final int commitLogSize;
 
     private ConcurrentSkipListMap<Long, MappedFile> offsetCache = new ConcurrentSkipListMap<>();
@@ -82,7 +105,7 @@ public class BatchConsumeQueue implements ConsumeQueueInterface, FileQueueLifeCy
 
         this.topic = topic;
         this.queueId = queueId;
-
+        //队列目录 "/store/batchconsumequeue/{topic}/{queueId}"
         String queueDir = this.storePath
             + File.separator + topic
             + File.separator + queueId;

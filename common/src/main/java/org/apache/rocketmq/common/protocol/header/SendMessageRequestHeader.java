@@ -30,28 +30,55 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
 public class SendMessageRequestHeader extends TopicQueueRequestHeader {
+    /**
+     * 生产者组
+     */
     @CFNotNull
     private String producerGroup;
+    /**
+     * topic
+     */
     @CFNotNull
     private String topic;
+    /**
+     * TBW102 某人消息topic
+     */
     @CFNotNull
     private String defaultTopic;
+    /**
+     * topic 默认个的 queues 数量
+     */
     @CFNotNull
     private Integer defaultTopicQueueNums;
+    /**
+     * MessageQueue 的 id
+     */
     @CFNotNull
     private Integer queueId;
+    /**
+     * 见 MessageSysFlag
+     */
     @CFNotNull
     private Integer sysFlag;
+    /**
+     * 创建时间
+     */
     @CFNotNull
     private Long bornTimestamp;
     @CFNotNull
     private Integer flag;
     @CFNullable
     private String properties;
+    /**
+     * 重新投递的次数
+     */
     @CFNullable
     private Integer reconsumeTimes;
     @CFNullable
     private boolean unitMode = false;
+    /**
+     * 是否是 MessageBatch
+     */
     @CFNullable
     private boolean batch = false;
     private Integer maxReconsumeTimes;

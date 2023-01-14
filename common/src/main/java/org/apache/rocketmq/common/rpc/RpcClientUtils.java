@@ -43,8 +43,10 @@ public class RpcClientUtils {
         if (body instanceof byte[]) {
             return (byte[])body;
         } else if (body instanceof RemotingSerializable) {
+            //如果body已经是RemotingSerializable 则 encode
             return ((RemotingSerializable) body).encode();
         } else if (body instanceof ByteBuffer) {
+            //如果body 是 ByteBuffer 则将 ByteBuffer 的数据 复制到 byte[]
             ByteBuffer buffer = (ByteBuffer)body;
             buffer.mark();
             byte[] data = new byte[buffer.remaining()];

@@ -19,26 +19,61 @@ package org.apache.rocketmq.store;
 import java.util.Map;
 
 public class DispatchRequest {
+    /**
+     * topic id
+     */
     private final String topic;
+    /**
+     * 队列id
+     */
     private final int queueId;
     private final long commitLogOffset;
+    /**
+     * 消息大小
+     */
     private int msgSize;
+    /**
+     * tags hash 编码
+     */
     private final long tagsCode;
+    /**
+     * 存储时间戳
+     */
     private final long storeTimestamp;
+    /**
+     * 队列偏移量
+     */
     private final long consumeQueueOffset;
+    /**
+     * KEYS
+     */
     private final String keys;
     private final boolean success;
+    /**
+     * 唯一key
+     */
     private final String uniqKey;
-
+    /**
+     * KEYS
+     */
     private final int sysFlag;
     private final long preparedTransactionOffset;
+    /**
+     * 属性
+     */
     private final Map<String, String> propertiesMap;
     private byte[] bitMap;
 
     private int bufferSize = -1;//the buffer size maybe larger than the msg size if the message is wrapped by something
 
     // for batch consume queue
+    /**
+     * 消息的基本偏移量
+     */
     private long  msgBaseOffset = -1;
+    /**
+     * 批量大小
+     */
     private short batchSize = 1;
 
     private long nextReputFromOffset = -1;

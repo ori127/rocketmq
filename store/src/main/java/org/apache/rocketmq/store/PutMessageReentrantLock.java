@@ -19,6 +19,7 @@ package org.apache.rocketmq.store;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
+ * 用于放置消息的锁
  * Exclusive lock implementation to put message
  */
 public class PutMessageReentrantLock implements PutMessageLock {

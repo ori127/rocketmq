@@ -18,9 +18,15 @@ import org.apache.rocketmq.common.MixAll;
 
 public class NameServerAddressUtils {
     public static final String INSTANCE_PREFIX = "MQ_INST_";
+    /**
+     * MQ_INST_\w+_\w+
+     */
     public static final String INSTANCE_REGEX = INSTANCE_PREFIX + "\\w+_\\w+";
     public static final String ENDPOINT_PREFIX = "(\\w+://|)";
     public static final Pattern NAMESRV_ENDPOINT_PATTERN = Pattern.compile("^http://.*");
+    /**
+     * ^(\w+://|)MQ_INST_\w+_\w+\..*
+     */
     public static final Pattern INST_ENDPOINT_PATTERN = Pattern.compile("^" + ENDPOINT_PREFIX + INSTANCE_REGEX + "\\..*");
 
     public static String getNameServerAddresses() {
@@ -31,6 +37,11 @@ public class NameServerAddressUtils {
         return INST_ENDPOINT_PATTERN.matcher(endpoint).matches();
     }
 
+    /**
+     * 从endpoint 解析出 实例id
+     * @param endpoint
+     * @return
+     */
     public static String parseInstanceIdFromEndpoint(String endpoint) {
         if (StringUtils.isEmpty(endpoint)) {
             return null;
@@ -38,6 +49,11 @@ public class NameServerAddressUtils {
         return endpoint.substring(endpoint.lastIndexOf("/") + 1, endpoint.indexOf('.'));
     }
 
+    /**
+     * 从nameSrvEndpoint 获取 nameServer 地址
+     * @param nameSrvEndpoint
+     * @return
+     */
     public static String getNameSrvAddrFromNamesrvEndpoint(String nameSrvEndpoint) {
         if (StringUtils.isEmpty(nameSrvEndpoint)) {
             return null;

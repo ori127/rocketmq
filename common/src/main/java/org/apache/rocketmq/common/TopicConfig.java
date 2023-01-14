@@ -27,20 +27,45 @@ import org.apache.rocketmq.common.constant.PermName;
 
 import static org.apache.rocketmq.common.TopicAttributes.TOPIC_MESSAGE_TYPE_ATTRIBUTE;
 
+/**
+ * topic 配置
+ */
 public class TopicConfig {
     private static final String SEPARATOR = " ";
     public static int defaultReadQueueNums = 16;
     public static int defaultWriteQueueNums = 16;
     private static final TypeReference<Map<String, String>> ATTRIBUTES_TYPE_REFERENCE = new TypeReference<Map<String, String>>() {
     };
+    /**
+     * topic名称
+     */
     private String topicName;
+    /**
+     * 读队列数量
+     */
     private int readQueueNums = defaultReadQueueNums;
+    /**
+     * 写队列数量
+     */
     private int writeQueueNums = defaultWriteQueueNums;
+    /**
+     * 有4 位表示
+     * 110 表示可读可写
+     */
     private int perm = PermName.PERM_READ | PermName.PERM_WRITE;
+    /**
+     * topic 过滤类型
+     */
     private TopicFilterType topicFilterType = TopicFilterType.SINGLE_TAG;
     private int topicSysFlag = 0;
+    /**
+     * topic 是否有序
+     */
     private boolean order = false;
     // Field attributes should not have ' ' char in key or value, otherwise will lead to decode failure.
+    /**
+     * TOPIC_MESSAGE_TYPE_ATTRIBUTE topic 的 类型
+     */
     private Map<String, String> attributes = new HashMap<>();
 
     public TopicConfig() {
@@ -82,6 +107,10 @@ public class TopicConfig {
         this.attributes = other.attributes;
     }
 
+    /**
+     * 进行编码"topicName readQueueNums writeQueueNums perm topicFilterType json(attributes)"
+     * @return
+     */
     public String encode() {
         StringBuilder sb = new StringBuilder();
         //[0]
@@ -107,6 +136,11 @@ public class TopicConfig {
         return sb.toString();
     }
 
+    /**
+     * 进行解码
+     * @param in
+     * @return
+     */
     public boolean decode(final String in) {
         String[] strs = in.split(SEPARATOR);
         if (strs.length >= 5) {
@@ -198,6 +232,10 @@ public class TopicConfig {
         this.attributes = attributes;
     }
 
+    /**
+     * 从 attributes 获取 topic 的额类型 如果不存在 对应的属性 则topic 类型为 NORMAL
+     * @return
+     */
     @JSONField(serialize = false, deserialize = false)
     public TopicMessageType getTopicMessageType() {
         if (attributes == null) {
@@ -209,7 +247,10 @@ public class TopicConfig {
         }
         return TopicMessageType.valueOf(content);
     }
-
+    /**
+     * 设置 topic 类型 放置在 attributes
+     * @return
+     */
     @JSONField(serialize = false, deserialize = false)
     public void setTopicMessageType(TopicMessageType topicMessageType) {
         attributes.put(TOPIC_MESSAGE_TYPE_ATTRIBUTE.getName(), topicMessageType.getValue());

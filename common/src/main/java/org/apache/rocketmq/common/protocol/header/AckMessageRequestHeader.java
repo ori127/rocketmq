@@ -22,15 +22,29 @@ import org.apache.rocketmq.remoting.annotation.CFNotNull;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class AckMessageRequestHeader implements CommandCustomHeader {
+    /**
+     * 消费者组
+     */
     @CFNotNull
     private String consumerGroup;
+    /**
+     * topic名称
+     */
     @CFNotNull
     private String topic;
+    /**
+     * 队列Id
+     */
     @CFNotNull
     private Integer queueId;
+    /**
+     * POP_CK
+     */
     @CFNotNull
     private String extraInfo;
-
+    /**
+     * 偏移量
+     */
     @CFNotNull
     private Long offset;
 

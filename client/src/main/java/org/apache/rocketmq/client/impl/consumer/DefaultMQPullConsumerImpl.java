@@ -384,7 +384,9 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner {
             this.rebalanceImpl.doRebalance(false);
         }
     }
-
+    /**
+     * 遍历消费者 消费 队列集合 进行持久 化
+     */
     @Override
     public void persistConsumerOffset() {
         try {

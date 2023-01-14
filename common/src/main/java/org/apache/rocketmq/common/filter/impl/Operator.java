@@ -23,8 +23,13 @@ public class Operator extends Op {
     public static final Operator RIGHTPARENTHESIS = new Operator(")", 30, false);
     public static final Operator AND = new Operator("&&", 20, true);
     public static final Operator OR = new Operator("||", 15, true);
-
+    /**
+     * 优先级
+     */
     private int priority;
+    /**
+     * 是否可比较
+     */
     private boolean compareable;
 
     private Operator(String symbol, int priority, boolean compareable) {

@@ -18,6 +18,12 @@
 package org.apache.rocketmq.common.attribute;
 
 public enum CQType {
+    /**
+     * 简单的消费队列
+     */
     SimpleCQ,
+    /**
+     * 批量的消费队列
+     */
     BatchCQ
 }

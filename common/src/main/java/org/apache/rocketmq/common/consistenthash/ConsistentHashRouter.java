@@ -25,12 +25,19 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
+ * hash 一致性算法
  * To hash Node objects to a hash ring with a certain amount of virtual node.
  * Method routeNode will return a Node instance which the object key should be allocated to according to consistent hash
  * algorithm
  */
 public class ConsistentHashRouter<T extends Node> {
+    /**
+     * hash 环  key 对应的hash值 value 为对应的虚拟节点
+     */
     private final SortedMap<Long, VirtualNode<T>> ring = new TreeMap<Long, VirtualNode<T>>();
+    /**
+     * hash 函数
+     */
     private final HashFunction hashFunction;
 
     public ConsistentHashRouter(Collection<T> pNodes, int vNodeCount) {
@@ -55,6 +62,7 @@ public class ConsistentHashRouter<T extends Node> {
     }
 
     /**
+     * 添加到该物理节点 映射 成 vNodeCount 数量的 虚拟节点 到 hash 环中
      * add physic node to the hash ring with some virtual nodes
      *
      * @param pNode physical node needs added to hash ring
@@ -71,6 +79,7 @@ public class ConsistentHashRouter<T extends Node> {
     }
 
     /**
+     * 移除该物理节点的虚拟 节点
      * remove the physical node from the hash ring
      */
     public void removeNode(T pNode) {
@@ -85,6 +94,7 @@ public class ConsistentHashRouter<T extends Node> {
     }
 
     /**
+     * 使用指定的key，在当前哈希环中路由最近的节点实例
      * with a specified key, route the nearest Node instance in the current hash ring
      *
      * @param objectKey the object key to find a nearest Node
@@ -94,11 +104,18 @@ public class ConsistentHashRouter<T extends Node> {
             return null;
         }
         Long hashVal = hashFunction.hash(objectKey);
+        //返回比 个值 的后续 Map
         SortedMap<Long, VirtualNode<T>> tailMap = ring.tailMap(hashVal);
+        //如果该key后续有最近的节点 则获取该节点 如果没有 则表示 该头 为 最近的节点
         Long nodeHashVal = !tailMap.isEmpty() ? tailMap.firstKey() : ring.firstKey();
         return ring.get(nodeHashVal).getPhysicalNode();
     }
 
+    /**
+     * 获取该物理节点的映射的虚拟节点数量
+     * @param pNode
+     * @return
+     */
     public int getExistingReplicas(T pNode) {
         int replicas = 0;
         for (VirtualNode<T> vNode : ring.values()) {

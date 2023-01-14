@@ -16,12 +16,17 @@
  */
 package org.apache.rocketmq.client.consumer;
 
+/**
+ * ack 状态
+ */
 public enum AckStatus {
     /**
+     * ack 确认成功
      * ack success
      */
     OK,
     /**
+     * 消息不存在
      * msg not exist
      */
     NO_EXIST,

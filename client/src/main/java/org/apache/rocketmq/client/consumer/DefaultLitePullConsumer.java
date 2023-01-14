@@ -85,6 +85,7 @@ public class DefaultLitePullConsumer extends ClientConfig implements LitePullCon
     private OffsetStore offsetStore;
 
     /**
+     * 队列的分配策略
      * Queue allocation algorithm
      */
     private AllocateMessageQueueStrategy allocateMessageQueueStrategy = new AllocateMessageQueueAveragely();
@@ -94,6 +95,7 @@ public class DefaultLitePullConsumer extends ClientConfig implements LitePullCon
     private boolean unitMode = false;
 
     /**
+     * 是否自动提交
      * The flag for auto commit offset
      */
     private boolean autoCommit = true;
@@ -109,33 +111,39 @@ public class DefaultLitePullConsumer extends ClientConfig implements LitePullCon
     private static final long MIN_AUTOCOMMIT_INTERVAL_MILLIS = 1000;
 
     /**
+     * 最大 提交偏移量的 间隔时间
      * Maximum commit offset interval time in milliseconds.
      */
     private long autoCommitIntervalMillis = 5 * 1000;
 
     /**
+     * 每次拉取消息的最大数量
      * Maximum number of messages pulled each time.
      */
     private int pullBatchSize = 10;
 
     /**
+     * 控制消费请求 阈值 每个消费最多缓存 10000 消费请求
      * Flow control threshold for consume request, each consumer will cache at most 10000 consume requests by default.
      * Consider the {@code pullBatchSize}, the instantaneous value may exceed the limit
      */
     private long pullThresholdForAll = 10000;
 
     /**
+     * 消费最多跨度
      * Consume max span offset.
      */
     private int consumeMaxSpan = 2000;
 
     /**
+     * 获取消息数量阈值 队列级别 每个消息队列 最多缓存 1000 个消息
      * Flow control threshold on queue level, each message queue will cache at most 1000 messages by default, Consider
      * the {@code pullBatchSize}, the instantaneous value may exceed the limit
      */
     private int pullThresholdForQueue = 1000;
 
     /**
+     * 获取消息大小阈值 队列级别 每个消息队列 最多缓存 100 MiB 个消息
      * Limit the cached message size on queue level, each message queue will cache at most 100 MiB messages by default,
      * Consider the {@code pullBatchSize}, the instantaneous value may exceed the limit
      *
@@ -145,6 +153,7 @@ public class DefaultLitePullConsumer extends ClientConfig implements LitePullCon
     private int pullThresholdSizeForQueue = 100;
 
     /**
+     * poll 超时时间
      * The poll timeout in milliseconds
      */
     private long pollTimeoutMillis = 1000 * 5;
@@ -157,6 +166,7 @@ public class DefaultLitePullConsumer extends ClientConfig implements LitePullCon
     private ConsumeFromWhere consumeFromWhere = ConsumeFromWhere.CONSUME_FROM_LAST_OFFSET;
 
     /**
+     * 消费时间 默认为半个小时时间
      * Backtracking consumption time with second precision. Time format is 20131223171201<br> Implying Seventeen twelve
      * and 01 seconds on December 23, 2013 year<br> Default backtracking consumption time Half an hour ago.
      */

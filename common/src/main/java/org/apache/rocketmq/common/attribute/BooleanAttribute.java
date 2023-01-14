@@ -18,7 +18,13 @@ package org.apache.rocketmq.common.attribute;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+/**
+ * Bool类型属性
+ */
 public class BooleanAttribute extends Attribute {
+    /**
+     * 默认值
+     */
     private final boolean defaultValue;
 
     public BooleanAttribute(String name, boolean changeable, boolean defaultValue) {
@@ -26,6 +32,10 @@ public class BooleanAttribute extends Attribute {
         this.defaultValue = defaultValue;
     }
 
+    /**
+     * 检验是否是布尔类型
+     * @param value
+     */
     @Override
     public void verify(String value) {
         checkNotNull(value);

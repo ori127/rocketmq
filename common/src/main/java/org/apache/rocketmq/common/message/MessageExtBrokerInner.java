@@ -22,9 +22,17 @@ import org.apache.rocketmq.common.TopicFilterType;
 
 public class MessageExtBrokerInner extends MessageExt {
     private static final long serialVersionUID = 7256001576878700634L;
+    /**
+     * 属性字符串
+     */
     private String propertiesString;
+    /**
+     * tags 的 hash 编码
+     */
     private long tagsCode;
-
+    /**
+     * 编码
+     */
     private ByteBuffer encodedBuff;
 
     public ByteBuffer getEncodedBuff() {

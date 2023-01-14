@@ -22,6 +22,9 @@ import org.apache.rocketmq.client.producer.MessageQueueSelector;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageQueue;
 
+/**
+ * FIXME::这个应该还没有实现
+ */
 public class SelectMessageQueueByMachineRoom implements MessageQueueSelector {
     private Set<String> consumeridcs;
 

@@ -25,6 +25,9 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.store.CommitLog.GroupCommitRequest;
 
+/**
+ * 检查刷新磁盘超时
+ */
 public class FlushDiskWatcher extends ServiceThread {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final LinkedBlockingQueue<GroupCommitRequest> commitRequests = new LinkedBlockingQueue<>();
@@ -39,11 +42,13 @@ public class FlushDiskWatcher extends ServiceThread {
         while (!isStopped()) {
             GroupCommitRequest request = null;
             try {
+                //获取提交的请求
                 request = commitRequests.take();
             } catch (InterruptedException e) {
                 log.warn("take flush disk commit request, but interrupted, this may caused by shutdown");
                 continue;
             }
+            //循环如果一直没有完成 检查 截止时间 超过截止 时间 唤醒消息 刷新磁盘超时
             while (!request.future().isDone()) {
                 long now = System.nanoTime();
                 if (now - request.getDeadLine() >= 0) {
@@ -53,6 +58,7 @@ public class FlushDiskWatcher extends ServiceThread {
                 // To avoid frequent thread switching, replace future.get with sleep here,
                 long sleepTime = (request.getDeadLine() - now) / 1_000_000;
                 sleepTime = Math.min(10, sleepTime);
+                //没有超过 截止 时间 但是剩余时间 是纳级别 也唤醒消费者 刷新磁盘超时
                 if (sleepTime == 0) {
                     request.wakeupCustomer(PutMessageStatus.FLUSH_DISK_TIMEOUT);
                     break;
