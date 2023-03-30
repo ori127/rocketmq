@@ -30,7 +30,13 @@ public class CqUnit {
      * 大小
      */
     private final int size;
+    /**
+     * 偏移量
+     */
     private final long pos;
+    /**
+     * 批量大小
+     */
     private final short batchNum;
     /**
      * Be careful, the tagsCode is reused as an address for extent file. To prevent accident mistake, we follow the
