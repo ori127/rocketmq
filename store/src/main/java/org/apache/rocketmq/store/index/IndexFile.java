@@ -26,7 +26,11 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.store.logfile.DefaultMappedFile;
 import org.apache.rocketmq.store.logfile.MappedFile;
-
+/**
+ * indexFile: indexHeader 记录indexFile信息
+ *            hashSlot 记录 index 的位置
+ *            index   具体的存储数据
+ */
 public class IndexFile {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     /**
@@ -37,13 +41,16 @@ public class IndexFile {
      * index大小 20个字节
      */
     private static int indexSize = 20;
+    /**
+     * 无效 index 标志
+     */
     private static int invalidIndex = 0;
     /**
      * hashSlot数量
      */
     private final int hashSlotNum;
     /**
-     * index数量
+     * index 数量
      */
     private final int indexNum;
     /**
@@ -51,33 +58,36 @@ public class IndexFile {
      */
     private final int fileTotalSize;
     /**
-     * 映射文件
+     * indexFile 映射文件
      */
     private final MappedFile mappedFile;
     /**
      * 文件映射文件Buffer
      */
     private final MappedByteBuffer mappedByteBuffer;
+    /**
+     * indexFile 的 indexHeader 信息 40 个字节
+     */
     private final IndexHeader indexHeader;
 
     public IndexFile(final String fileName, final int hashSlotNum, final int indexNum,
         final long endPhyOffset, final long endTimestamp) throws IOException {
-        //计算文件总共大小
+        //计算文件总共大小 根据大小创建映射文件 
         this.fileTotalSize =
             IndexHeader.INDEX_HEADER_SIZE + (hashSlotNum * hashSlotSize) + (indexNum * indexSize);
         this.mappedFile = new DefaultMappedFile(fileName, fileTotalSize);
         this.mappedByteBuffer = this.mappedFile.getMappedByteBuffer();
         this.hashSlotNum = hashSlotNum;
         this.indexNum = indexNum;
-
+        //创建该映射文件副本 提供 indexHeader 操作该映射文件       
         ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
         this.indexHeader = new IndexHeader(byteBuffer);
-
+        //设置 该映射文件的 结束偏移量
         if (endPhyOffset > 0) {
             this.indexHeader.setBeginPhyOffset(endPhyOffset);
             this.indexHeader.setEndPhyOffset(endPhyOffset);
         }
-
+        //设置 该映射文件的 结束时间
         if (endTimestamp > 0) {
             this.indexHeader.setBeginTimestamp(endTimestamp);
             this.indexHeader.setEndTimestamp(endTimestamp);
@@ -178,7 +188,7 @@ public class IndexFile {
                 if (invalidIndex == slotValue) {
                     this.indexHeader.incHashSlotCount();
                 }
-                //增加 index 计数 记录计数的偶阿布图库
+                //增加 index 计数 记录计 物理偏移量 存储时间
                 this.indexHeader.incIndexCount();
                 this.indexHeader.setEndPhyOffset(phyOffset);
                 this.indexHeader.setEndTimestamp(storeTimestamp);
@@ -243,11 +253,12 @@ public class IndexFile {
             int absSlotPos = IndexHeader.INDEX_HEADER_SIZE + slotPos * hashSlotSize;
 
             try {
-                //获取该key 对应的 index 值
+                //获取该key 对应的 index 位置
                 int slotValue = this.mappedByteBuffer.getInt(absSlotPos);
                 if (slotValue <= invalidIndex || slotValue > this.indexHeader.getIndexCount()
                     || this.indexHeader.getIndexCount() <= 1) {
                 } else {
+                    //从 nextIndexToRead 开始查找
                     for (int nextIndexToRead = slotValue; ; ) {
                         if (phyOffsets.size() >= maxNum) {
                             break;

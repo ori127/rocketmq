@@ -19,6 +19,10 @@ package org.apache.rocketmq.store.hook;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.store.PutMessageResult;
 
+
+/**
+ * put消息的钩子
+ */
 public interface PutMessageHook {
 
     /**

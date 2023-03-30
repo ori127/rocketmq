@@ -32,7 +32,9 @@ public class StoreUtil {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     public static final long TOTAL_PHYSICAL_MEMORY_SIZE = getTotalPhysicalMemorySize();
-
+    /**
+     * 获取操作系统的总共的物理内存
+     */
     @SuppressWarnings("restriction")
     public static long getTotalPhysicalMemorySize() {
         long physicalTotal = 1024 * 1024 * 1024 * 24L;
@@ -43,7 +45,11 @@ public class StoreUtil {
 
         return physicalTotal;
     }
-
+    /**
+     * 将数据添加到该文件中
+     * @param file
+     * @param data
+     */
     public static void fileAppend(MappedFile file, ByteBuffer data) {
         boolean success = file.appendMessage(data);
         if (!success) {
@@ -66,9 +72,12 @@ public class StoreUtil {
             }
 
             long firstFileIndex = 0;
+            //最后一个文件的索引
             long lastFileIndex = (lastFile.getFileFromOffset() - firstFile.getFileFromOffset()) / mappedFileSize;
+            //当前文件的索引
             long currentFileIndex = (currentFile - firstFile.getFileFromOffset()) / mappedFileSize;
             long behind = (lastFile.getFileFromOffset() - currentFile) / mappedFileSize;
+            //当前文件是否 在 这个 mappedFileQueue 当中
             boolean exist = firstFile.getFileFromOffset() <= currentFile && currentFile <= lastFile.getFileFromOffset();
             return new FileQueueSnapshot(firstFile, firstFileIndex, lastFile, lastFileIndex, currentFile, currentFileIndex, behind, exist);
         } catch (Exception e) {

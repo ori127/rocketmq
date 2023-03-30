@@ -19,6 +19,9 @@ package org.apache.rocketmq.store.index;
 import java.util.List;
 
 public class QueryOffsetResult {
+    /**
+     * 对应 key 找出来的 物理偏移量
+     */
     private final List<Long> phyOffsets;
     /**
      * index文件最后一个更新时间戳

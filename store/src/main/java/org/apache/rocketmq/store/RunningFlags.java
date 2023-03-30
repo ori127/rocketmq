@@ -127,6 +127,10 @@ public class RunningFlags {
         this.flagBits |= WRITE_INDEX_FILE_ERROR_BIT;
     }
 
+    /**
+     * indexFile错误
+     * @return
+     */
     public boolean isIndexFileError() {
         if ((this.flagBits & WRITE_INDEX_FILE_ERROR_BIT) == WRITE_INDEX_FILE_ERROR_BIT) {
             return true;
@@ -134,13 +138,18 @@ public class RunningFlags {
 
         return false;
     }
-
+    /**
+     * 获取标记状态 并且 将磁盘 标记 已满
+     */
     public boolean getAndMakeDiskFull() {
         boolean result = !((this.flagBits & DISK_FULL_BIT) == DISK_FULL_BIT);
         this.flagBits |= DISK_FULL_BIT;
         return result;
     }
-
+    /**
+     * 获取标记状态将磁盘标记 ok
+     * @return
+     */
     public boolean getAndMakeDiskOK() {
         boolean result = !((this.flagBits & DISK_FULL_BIT) == DISK_FULL_BIT);
         this.flagBits &= ~DISK_FULL_BIT;

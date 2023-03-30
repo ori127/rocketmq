@@ -19,13 +19,34 @@ package org.apache.rocketmq.store;
 import org.apache.rocketmq.store.logfile.MappedFile;
 
 public class FileQueueSnapshot {
+    /**
+     * 第一个映射文件
+     */
     private MappedFile firstFile;
+    /**
+     * 第一个映射文件索引
+     */
     private long firstFileIndex;
+    /**
+     * 最后一个映射文件
+     */
     private MappedFile lastFile;
+    /**
+     * 最后一个映射文件 在 这个 mappedFileQueue 当中 当中的 index
+     */
     private long lastFileIndex;
+    /**
+     * 当前文件
+     */
     private long currentFile;
+    /**
+     * 当前文件 在 这个 mappedFileQueue 当中 当中的 index
+     */
     private long currentFileIndex;
     private long behindCount;
+    /**
+     * 当前这个文件 是否 在 这个 mappedFileQueue 当中
+     */
     private boolean exist;
 
     public FileQueueSnapshot() {

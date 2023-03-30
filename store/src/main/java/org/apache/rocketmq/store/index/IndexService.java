@@ -54,6 +54,9 @@ public class IndexService {
      * 存储路径 "/index"
      */
     private final String storePath;
+    /**
+     * indexFile 文件集合
+     */
     private final ArrayList<IndexFile> indexFileList = new ArrayList<IndexFile>();
     /**
      * 锁
@@ -69,6 +72,7 @@ public class IndexService {
     }
 
     public boolean load(final boolean lastExitOK) {
+        //根据存储路径获取文件生成 indexFile 加载 添加 index 文件集合
         File dir = new File(this.storePath);
         File[] files = dir.listFiles();
         if (files != null) {
@@ -113,7 +117,9 @@ public class IndexService {
 
         return (long) indexFileList.get(0).getFileSize() * indexFileList.size();
     }
-
+    /**
+     * 删除 index 文件 结束便宜量 比 该偏移量小的 index文件
+     */
     public void deleteExpiredFile(long offset) {
         Object[] files = null;
         try {
@@ -121,7 +127,7 @@ public class IndexService {
             if (this.indexFileList.isEmpty()) {
                 return;
             }
-            //判断最后一个index文件结束偏移量是否比这个 偏移量小
+            //判断第一个index文件结束偏移量是否比这个 偏移量小
             long endPhyOffset = this.indexFileList.get(0).getEndPhyOffset();
             if (endPhyOffset < offset) {
                 files = this.indexFileList.toArray();
@@ -147,7 +153,10 @@ public class IndexService {
             this.deleteExpiredFile(fileList);
         }
     }
-
+    /**
+     * 删除 index 文件 从 index文件 集合 当中 files
+     * @param files
+     */
     private void deleteExpiredFile(List<IndexFile> files) {
         if (!files.isEmpty()) {
             try {
@@ -168,7 +177,9 @@ public class IndexService {
             }
         }
     }
-
+    /**
+     * 删除所有 index文件
+     */
     public void destroy() {
         try {
             this.readWriteLock.writeLock().lock();
@@ -182,7 +193,9 @@ public class IndexService {
             this.readWriteLock.writeLock().unlock();
         }
     }
-
+    /**
+     * 在 begin 和 end 之前 查找 该 topic#key 对应 物理偏移量
+     */
     public QueryOffsetResult queryOffset(String topic, String key, int maxNum, long begin, long end) {
         List<Long> phyOffsets = new ArrayList<Long>(maxNum);
 
@@ -192,6 +205,7 @@ public class IndexService {
         try {
             this.readWriteLock.readLock().lock();
             if (!this.indexFileList.isEmpty()) {
+                //从indexFile 文件 遍历 查找 在 begin 和 end 之间的 index文件 然后
                 for (int i = this.indexFileList.size(); i > 0; i--) {
                     IndexFile f = this.indexFileList.get(i - 1);
                     boolean lastFile = i == this.indexFileList.size();
@@ -200,7 +214,7 @@ public class IndexService {
                         indexLastUpdateTimestamp = f.getEndTimestamp();
                         indexLastUpdatePhyoffset = f.getEndPhyOffset();
                     }
-                    //index文件是否符合这个时间 然后查找 key 为 "topic#key"
+                    //index文件是否符合这个时间 然后查找 key 为 "topic#key" 的物理偏移量 这个找出来的偏移量并非是 该 key 的真的便宜量
                     if (f.isTimeMatched(begin, end)) {
 
                         f.selectPhyOffset(phyOffsets, buildKey(topic, key), maxNum, begin, end);
@@ -227,7 +241,9 @@ public class IndexService {
     private String buildKey(final String topic, final String key) {
         return topic + "#" + key;
     }
-
+    /**
+     * 为req 创建 index , 回滚消息 不进行 构建 index
+     */
     public void buildIndex(DispatchRequest req) {
         //获取最后一个或者创建index 文件
         IndexFile indexFile = retryGetAndCreateIndexFile();
@@ -279,7 +295,9 @@ public class IndexService {
             LOGGER.error("build index error, stop building index");
         }
     }
-
+    /**
+     * index 文件当中 建立 index  直至 成功
+     */
     private IndexFile putKey(IndexFile indexFile, DispatchRequest msg, String idxKey) {
         //在index 文件上建立 index 直至成功
         for (boolean ok = indexFile.putKey(idxKey, msg.getCommitLogOffset(), msg.getStoreTimestamp()); !ok; ) {
@@ -297,7 +315,7 @@ public class IndexService {
     }
 
     /**
-     * 获取或者创建index 文件
+     * 尝试获取或者创建index 文件
      * Retries to get or create index file.
      *
      * @return {@link IndexFile} or null on failure.
@@ -327,7 +345,9 @@ public class IndexService {
 
         return indexFile;
     }
-
+    /**
+     * 获取和创建 indexFile
+     */
     public IndexFile getAndCreateLastIndexFile() {
         IndexFile indexFile = null;
         IndexFile prevIndexFile = null;
