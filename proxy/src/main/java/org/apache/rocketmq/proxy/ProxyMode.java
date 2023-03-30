@@ -17,8 +17,17 @@
 
 package org.apache.rocketmq.proxy;
 
+/**
+ * 代理方式
+ */
 public enum ProxyMode {
+    /**
+     * 本地
+     */
     LOCAL("LOCAL"),
+    /**
+     * 集群
+     */
     CLUSTER("CLUSTER");
 
     private final String mode;
