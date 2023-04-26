@@ -57,7 +57,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
 
     protected static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     /**
-     * 静态遍历 总共映射 文件 内存大小
+     * 静态变量 总共映射 文件 内存大小
      */
     protected static final AtomicLong TOTAL_MAPPED_VIRTUAL_MEMORY = new AtomicLong(0);
     /**
@@ -186,7 +186,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
         this.file = new File(fileName);
         this.fileFromOffset = Long.parseLong(this.file.getName());
         boolean ok = false;
-
+        //确保父级目录存在 不存在进行创建
         UtilAll.ensureDirOK(this.file.getParent());
 
         try {
@@ -279,7 +279,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
         int currentPos = WROTE_POSITION_UPDATER.get(this);
         //写位置 小于 文件大小
         if (currentPos < this.fileSize) {
-            //获取写缓存 设置 position 为 wrotePosition
+            //获取写缓存 设置 position 为 wrotePosition slice 创建一个副本
             ByteBuffer byteBuffer = appendMessageBuffer().slice();
             byteBuffer.position(currentPos);
             AppendMessageResult result;
@@ -370,6 +370,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
             } catch (Throwable e) {
                 log.error("Error occurred when append message to mappedFile.", e);
             }
+            //增加写操作计数
             WROTE_POSITION_UPDATER.addAndGet(this, length);
             return true;
         }
@@ -378,11 +379,12 @@ public class DefaultMappedFile extends AbstractMappedFile {
     }
 
     /**
+     * 进行刷新 返回筛选位置
      * @return The current flushed position
      */
     @Override
     public int flush(final int flushLeastPages) {
-        //是否满足刷新条件
+        //是否满足刷新条件 至少 刷多少个页面
         if (this.isAbleToFlush(flushLeastPages)) {
             //如果还被持有 可用 获取可读位置
             if (this.hold()) {
@@ -404,7 +406,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
                 } catch (Throwable e) {
                     log.error("Error occurred when force data to disk.", e);
                 }
-                //flushedPosition
+                //flushedPosition 记录 刷新 位置
                 FLUSHED_POSITION_UPDATER.set(this, value);
                 this.release();
             } else {
@@ -422,6 +424,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
             //no need to commit data to file channel, so just regard wrotePosition as committedPosition.
             return WROTE_POSITION_UPDATER.get(this);
         }
+        //如果能够提交
         if (this.isAbleToCommit(commitLeastPages)) {
             //如果还被持有 可用  进行提交
             if (this.hold()) {
@@ -463,7 +466,11 @@ public class DefaultMappedFile extends AbstractMappedFile {
             }
         }
     }
-
+    /**
+     * 判断是否能够刷新
+     * @param flushLeastPages
+     * @return
+     */
     private boolean isAbleToFlush(final int flushLeastPages) {
         //获取 flushedPosition
         int flush = FLUSHED_POSITION_UPDATER.get(this);
@@ -480,7 +487,9 @@ public class DefaultMappedFile extends AbstractMappedFile {
         //否则判断 写位置  是否 大于 刷新位置
         return write > flush;
     }
-
+    /**
+     * 判断是否能够提交
+     */
     protected boolean isAbleToCommit(final int commitLeastPages) {
         //获取 committedPosition wrotePosition
         int commit = COMMITTED_POSITION_UPDATER.get(this);

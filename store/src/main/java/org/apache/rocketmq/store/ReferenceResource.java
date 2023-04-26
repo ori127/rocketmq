@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public abstract class ReferenceResource {
     /**
-     * 应用计数
+     * 引用计数
      */
     protected final AtomicLong refCount = new AtomicLong(1);
     /**
@@ -38,7 +38,10 @@ public abstract class ReferenceResource {
      * 记录关闭的时间戳
      */
     private volatile long firstShutdownTimestamp = 0;
-
+    /**
+     * 检查是否可用 增加引用计数
+     * @return
+     */
     public synchronized boolean hold() {
         //是否可用 可用增加计数
         if (this.isAvailable()) {

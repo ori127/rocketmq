@@ -33,10 +33,22 @@ public class TimerWheel {
 
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     public static final int BLANK = -1, IGNORE = -2;
+    /**
+     * 插槽数量
+     */
     public final int slotsTotal;
     public final int precisionMs;
+    /**
+     * 文件名
+     */
     private String fileName;
+    /**
+     * 随机访问文件
+     */
     private final RandomAccessFile randomAccessFile;
+    /**
+     * 文件Channel
+     */
     private final FileChannel fileChannel;
     private final MappedByteBuffer mappedByteBuffer;
     private final ByteBuffer byteBuffer;
@@ -46,6 +58,9 @@ public class TimerWheel {
             return byteBuffer.duplicate();
         }
     };
+    /**
+     * weel 大小 为 插槽的数量 * 插槽的大小 * 2 为什么要 2 倍
+     */
     private final int wheelLength;
 
     public TimerWheel(String fileName, int slotsTotal, int precisionMs) throws IOException {
@@ -55,6 +70,7 @@ public class TimerWheel {
         this.wheelLength = this.slotsTotal * 2 * Slot.SIZE;
 
         File file = new File(fileName);
+        //确保文件父级目录
         UtilAll.ensureDirOK(file.getParent());
 
         try {

@@ -32,7 +32,7 @@ public class AppendMessageResult {
     private long wroteOffset;
     // Write Bytes
     /**
-     * 写入字节
+     * 写入字节数量
      */
     private int wroteBytes;
     // Message ID

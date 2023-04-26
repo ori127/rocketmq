@@ -17,6 +17,9 @@
 package org.apache.rocketmq.store.timer;
 
 public class Slot {
+    /**
+     * slot 大小
+     */
     public static final short SIZE = 32;
     public final long timeMs;
     public final long firstPos;

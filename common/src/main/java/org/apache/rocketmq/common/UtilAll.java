@@ -733,7 +733,9 @@ public class UtilAll {
             return viewed(viewedBuffer);
         }
     }
-
+    /**
+     * 确保文件夹 用逗号进行 分割 如果 不存在 文件夹 则 进行创建
+     */
     public static void ensureDirOK(final String dirName) {
         if (dirName != null) {
             if (dirName.contains(MixAll.MULTI_PATH_SPLITTER)) {
@@ -746,7 +748,9 @@ public class UtilAll {
             }
         }
     }
-
+    /**
+     * 文件夹不存在进行创建
+     */
     private static void  createDirIfNotExist(String dirName) {
         File f = new File(dirName);
         if (!f.exists()) {
