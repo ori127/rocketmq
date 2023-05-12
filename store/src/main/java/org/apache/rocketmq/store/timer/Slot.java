@@ -21,10 +21,25 @@ public class Slot {
      * slot 大小
      */
     public static final short SIZE = 32;
+    /**
+     * 8个字节 该slot 对应的开始时间
+     */
     public final long timeMs;
+    /**
+     * 8个字节 16个字节
+     */
     public final long firstPos;
+    /**
+     * 8个字节 24个字节
+     */
     public final long lastPos;
+    /**
+     * 4个字节 28个字节
+     */
     public final int num;
+    /**
+     * 4个 字节 还未使用
+     */
     public final int magic; //no use now, just keep it
 
     public Slot(long timeMs, long firstPos, long lastPos) {

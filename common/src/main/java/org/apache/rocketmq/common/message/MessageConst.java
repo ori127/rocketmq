@@ -124,12 +124,33 @@ public class MessageConst {
 
     public static final HashSet<String> STRING_HASH_SET = new HashSet<>(64);
 
+    /**
+     * 入队时间 key
+     */
     public static final String PROPERTY_TIMER_ENQUEUE_MS = "TIMER_ENQUEUE_MS";
+    /**
+     * 出队时间 key
+     */
     public static final String PROPERTY_TIMER_DEQUEUE_MS = "TIMER_DEQUEUE_MS";
+    /**
+     * 滚动时间 key
+     */
     public static final String PROPERTY_TIMER_ROLL_TIMES = "TIMER_ROLL_TIMES";
+    /**
+     * 超时时间 key
+     */
     public static final String PROPERTY_TIMER_OUT_MS = "TIMER_OUT_MS";
+    /**
+     * 延迟唯一 key
+     */
     public static final String PROPERTY_TIMER_DEL_UNIQKEY = "TIMER_DEL_UNIQKEY";
+    /**
+     * 延迟等级
+     */
     public static final String PROPERTY_TIMER_DELAY_LEVEL = "TIMER_DELAY_LEVEL";
+    /**
+     * 延迟时间
+     */
     public static final String PROPERTY_TIMER_DELAY_MS = "TIMER_DELAY_MS";
 
     static {

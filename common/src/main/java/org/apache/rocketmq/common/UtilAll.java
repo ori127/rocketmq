@@ -681,9 +681,11 @@ public class UtilAll {
     }
 
     public static void cleanBuffer(final ByteBuffer buffer) {
+        //不是直接内存 或者 容量为 0 则不处理
         if (buffer == null || !buffer.isDirect() || buffer.capacity() == 0) {
             return;
         }
+        //java 9 调用 unsafe invokeCleaner 方法进行 清理
         if (SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)) {
             try {
                 Field field = Unsafe.class.getDeclaredField("theUnsafe");

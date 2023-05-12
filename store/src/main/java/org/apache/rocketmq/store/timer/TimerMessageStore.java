@@ -71,10 +71,25 @@ import org.apache.rocketmq.store.util.PerfCounter;
 
 public class TimerMessageStore {
     public static final String TIMER_TOPIC = TopicValidator.SYSTEM_TOPIC_PREFIX + "wheel_timer";
+    /**
+     * 超时时间 key
+     */
     public static final String TIMER_OUT_MS = MessageConst.PROPERTY_TIMER_OUT_MS;
+    /**
+     * 入队时间 key
+     */
     public static final String TIMER_ENQUEUE_MS = MessageConst.PROPERTY_TIMER_ENQUEUE_MS;
+    /**
+     * 出队时间 key
+     */
     public static final String TIMER_DEQUEUE_MS = MessageConst.PROPERTY_TIMER_DEQUEUE_MS;
+    /**
+     * 滚动时间 key
+     */
     public static final String TIMER_ROLL_TIMES = MessageConst.PROPERTY_TIMER_ROLL_TIMES;
+    /**
+     * 延迟唯一 key
+     */
     public static final String TIMER_DELETE_UNIQKEY = MessageConst.PROPERTY_TIMER_DEL_UNIQKEY;
     public static final Random RANDOM = new Random();
     public static final int PUT_OK = 0, PUT_NEED_RETRY = 1, PUT_NO_RETRY = 2;
