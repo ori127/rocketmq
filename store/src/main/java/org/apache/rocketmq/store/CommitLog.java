@@ -1562,6 +1562,9 @@ public class CommitLog implements Swappable {
      */
     public static class GroupCommitRequest {
         private final long nextOffset;
+        /**
+         * 表示 结果
+         */
         // Indicate the GroupCommitRequest result: true or false
         private final CompletableFuture<PutMessageStatus> flushOKFuture = new CompletableFuture<>();
         private volatile int ackNums = 1;
@@ -1696,7 +1699,7 @@ public class CommitLog implements Swappable {
             } catch (InterruptedException e) {
                 CommitLog.log.warn("GroupCommitService Exception, ", e);
             }
-
+            
             synchronized (this) {
                 this.swapRequests();
             }
@@ -1726,20 +1729,31 @@ public class CommitLog implements Swappable {
     }
 
     class GroupCheckService extends FlushCommitLogService {
+        /**
+         * 写请求 一个 队列 进行写 
+         */
         private volatile List<GroupCommitRequest> requestsWrite = new ArrayList<GroupCommitRequest>();
+        /**
+         * 读请求 一个 队列 进行读
+         */
         private volatile List<GroupCommitRequest> requestsRead = new ArrayList<GroupCommitRequest>();
-
+        /**
+         * 判断异步写请求是否 最大 写消息请求的 2被
+         */    
         public boolean isAsyncRequestsFull() {
             return requestsWrite.size() > CommitLog.this.defaultMessageStore.getMessageStoreConfig().getMaxAsyncPutMessageRequests() * 2;
         }
 
         public synchronized boolean putRequest(final GroupCommitRequest request) {
+            // 对写请求的队列进行上锁 添加的到写请求 队列
             synchronized (this.requestsWrite) {
                 this.requestsWrite.add(request);
             }
+            //标记已经被唤醒 进行唤醒
             if (hasNotified.compareAndSet(false, true)) {
                 waitPoint.countDown(); // notify
             }
+            //判断写队列 是否 超过 最大 写消息的请求
             boolean flag = this.requestsWrite.size() >
                 CommitLog.this.defaultMessageStore.getMessageStoreConfig().getMaxAsyncPutMessageRequests();
             if (flag) {
@@ -1750,19 +1764,27 @@ public class CommitLog implements Swappable {
             return flag;
         }
 
+
+        /**
+         * 交换请求 一个 队列 用于 写 一个 队列用于 读
+         */
         private void swapRequests() {
             List<GroupCommitRequest> tmp = this.requestsWrite;
             this.requestsWrite = this.requestsRead;
-            this.requestsRead = tmp;
+            this.requestsRead = tmp; 
         }
-
+        
         private void doCommit() {
+            //对读队列进行上锁
             synchronized (this.requestsRead) {
                 if (!this.requestsRead.isEmpty()) {
+                    //遍历读请求
                     for (GroupCommitRequest req : this.requestsRead) {
                         // There may be a message in the next file, so a maximum of
                         // two times the flush
+                        //FIXME:: 刷新两次
                         boolean flushOK = false;
+                        //判断是否已经 进行 刷新  当前 线程 进行 休眠 
                         for (int i = 0; i < 1000; i++) {
                             flushOK = CommitLog.this.mappedFileQueue.getFlushedWhere() >= req.getNextOffset();
                             if (flushOK) {
@@ -1775,14 +1797,15 @@ public class CommitLog implements Swappable {
                                 }
                             }
                         }
+                        // 刷新成功 或者 刷新超时 进行唤醒
                         req.wakeupCustomer(flushOK ? PutMessageStatus.PUT_OK : PutMessageStatus.FLUSH_DISK_TIMEOUT);
                     }
-
+                    //检查点 记录 检查时间
                     long storeTimestamp = CommitLog.this.mappedFileQueue.getStoreTimestamp();
                     if (storeTimestamp > 0) {
                         CommitLog.this.defaultMessageStore.getStoreCheckpoint().setPhysicMsgTimestamp(storeTimestamp);
                     }
-
+                    //清理 读队列    
                     this.requestsRead.clear();
                 }
             }

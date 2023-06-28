@@ -19,10 +19,12 @@ package org.apache.rocketmq.store.ha;
 
 public enum HAConnectionState {
     /**
+     * 等待创建连接
      * Ready to start connection.
      */
     READY,
     /**
+     * 日志一致性 检查
      * CommitLog consistency checking.
      */
     HANDSHAKE,
@@ -32,7 +34,7 @@ public enum HAConnectionState {
      */
     TRANSFER,
     /**
-     *暂时停止传输
+     * 暂时停止传输
      * Temporarily stop transferring.
      */
     SUSPEND,
