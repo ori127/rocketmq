@@ -29,7 +29,9 @@ import org.apache.rocketmq.store.CommitLog.GroupCommitRequest;
  * 检查刷新磁盘超时
  */
 public class FlushDiskWatcher extends ServiceThread {
+
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    
     private final LinkedBlockingQueue<GroupCommitRequest> commitRequests = new LinkedBlockingQueue<>();
 
     @Override

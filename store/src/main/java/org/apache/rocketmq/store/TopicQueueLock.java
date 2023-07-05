@@ -23,7 +23,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * topic队列锁 根据 topicQueueKey 进上锁
+ * topic队列锁 根据 topicQueueKey 进行 hash 获取对应的锁 进上锁 默认锁的对象是 32个
  */
 public class TopicQueueLock {
     private final int size;

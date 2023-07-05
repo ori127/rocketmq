@@ -27,6 +27,9 @@ public class DispatchRequest {
      * 队列id
      */
     private final int queueId;
+    /**
+     * 物理偏移量
+     */
     private final long commitLogOffset;
     /**
      * 消息大小

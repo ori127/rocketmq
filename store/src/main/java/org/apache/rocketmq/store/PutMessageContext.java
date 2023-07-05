@@ -18,6 +18,9 @@
 package org.apache.rocketmq.store;
 
 public class PutMessageContext {
+    /**
+     * topic 和 queueId key
+     */
     private String topicQueueTableKey;
     private long[] phyPos;
     private int batchSize;
