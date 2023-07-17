@@ -1057,11 +1057,11 @@ public class CommitLog implements Swappable {
         }
 
         PutMessageResult putMessageResult = new PutMessageResult(PutMessageStatus.PUT_OK, result);
-
+        //统计topic 当中的消息数量 tpoic 写入的字节数
         // Statistics
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).add(result.getMsgNum());
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).add(result.getWroteBytes());
-
+        //进行刷新 获取备 刷新结果
         return handleDiskFlushAndHA(putMessageResult, msg, needAckNums, needHandleHA);
     }
 
@@ -1072,19 +1072,20 @@ public class CommitLog implements Swappable {
         StoreStatsService storeStatsService = this.defaultMessageStore.getStoreStatsService();
 
         final int tranType = MessageSysFlag.getTransactionValue(messageExtBatch.getSysFlag());
-
+        //是事务则不支持
         if (tranType != MessageSysFlag.TRANSACTION_NOT_TYPE) {
             return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null));
         }
+        //延迟等级则不支持
         if (messageExtBatch.getDelayTimeLevel() > 0) {
             return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null));
         }
-
+        //消息产生地址
         InetSocketAddress bornSocketAddress = (InetSocketAddress) messageExtBatch.getBornHost();
         if (bornSocketAddress.getAddress() instanceof Inet6Address) {
             messageExtBatch.setBornHostV6Flag();
         }
-
+        //消息存储地址
         InetSocketAddress storeSocketAddress = (InetSocketAddress) messageExtBatch.getStoreHost();
         if (storeSocketAddress.getAddress() instanceof Inet6Address) {
             messageExtBatch.setStoreHostAddressV6Flag();
@@ -1092,19 +1093,21 @@ public class CommitLog implements Swappable {
 
         long elapsedTimeInLock = 0;
         MappedFile unlockMappedFile = null;
+        //获取最后一个映射文件
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
-
+        //写入位置
         long currOffset;
         if (mappedFile == null) {
             currOffset = 0;
         } else {
             currOffset = mappedFile.getFileFromOffset() + mappedFile.getWrotePosition();
         }
-
+        //需要确认数量
         int needAckNums = this.defaultMessageStore.getMessageStoreConfig().getInSyncReplicas();
+        //是否需要处理高可用
         boolean needHandleHA = needHandleHA(messageExtBatch);
 
-
+        //需要高可用 启用Controller
         if (needHandleHA && this.defaultMessageStore.getBrokerConfig().isEnableControllerMode()) {
             if (this.defaultMessageStore.getHaService().inSyncReplicasNums(currOffset) < this.defaultMessageStore.getMessageStoreConfig().getMinInSyncReplicas()) {
                 return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.IN_SYNC_REPLICAS_NOT_ENOUGH, null));
@@ -1114,6 +1117,7 @@ public class CommitLog implements Swappable {
                 needAckNums = MixAll.ALL_ACK_IN_SYNC_STATE_SET;
             }
         } else if (needHandleHA && this.defaultMessageStore.getBrokerConfig().isEnableSlaveActingMaster()) {
+            //启用高可用 并且自动选主
             int inSyncReplicas = Math.min(this.defaultMessageStore.getAliveReplicaNumInGroup(),
                 this.defaultMessageStore.getHaService().inSyncReplicasNums(currOffset));
             needAckNums = calcNeedAckNums(inSyncReplicas);
@@ -1123,29 +1127,32 @@ public class CommitLog implements Swappable {
             }
         }
 
+        //从线程当中获取  putMessage 更新最大消息
         //fine-grained lock instead of the coarse-grained
         PutMessageThreadLocal pmThreadLocal = this.putMessageThreadLocal.get();
         updateMaxMessageSize(pmThreadLocal);
         MessageExtEncoder batchEncoder = pmThreadLocal.getEncoder();
-
+        // topic 和 queueId 生成 key
         String topicQueueKey = generateKey(pmThreadLocal.getKeyBuilder(), messageExtBatch);
-
+        //存储消息的上下文
         PutMessageContext putMessageContext = new PutMessageContext(topicQueueKey);
+        //为消息设置 编码后的消息
         messageExtBatch.setEncodedBuff(batchEncoder.encode(messageExtBatch, putMessageContext));
-
+        //topic队列进行上锁        
         topicQueueLock.lock(topicQueueKey);
         try {
+            //TODO::?
             defaultMessageStore.assignOffset(messageExtBatch, (short) putMessageContext.getBatchSize());
-
+            //自旋 或者 重入锁
             putMessageLock.lock();
             try {
                 long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
                 this.beginTimeInLock = beginLockTimestamp;
-
+                //设置存储时间
                 // Here settings are stored timestamp, in order to ensure an orderly
                 // global
                 messageExtBatch.setStoreTimestamp(beginLockTimestamp);
-
+                //文件已经满了 则进行创建文件
                 if (null == mappedFile || mappedFile.isFull()) {
                     mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
                 }
@@ -1154,11 +1161,12 @@ public class CommitLog implements Swappable {
                     beginTimeInLock = 0;
                     return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPPED_FILE_FAILED, null));
                 }
-
+                //写入消息
                 result = mappedFile.appendMessages(messageExtBatch, this.appendMessageCallback, putMessageContext);
                 switch (result.getStatus()) {
                     case PUT_OK:
                         break;
+                    //TODO::假如文件又结束了呢
                     case END_OF_FILE:
                         unlockMappedFile = mappedFile;
                         // Create a new file, re-write the message
@@ -1180,26 +1188,28 @@ public class CommitLog implements Swappable {
                         beginTimeInLock = 0;
                         return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.UNKNOWN_ERROR, result));
                 }
-
+                //计算离开锁的时间
                 elapsedTimeInLock = this.defaultMessageStore.getSystemClock().now() - beginLockTimestamp;
                 beginTimeInLock = 0;
             } finally {
+                //进行解锁
                 putMessageLock.unlock();
             }
         } finally {
+            //队列解锁
             topicQueueLock.unlock(topicQueueKey);
         }
 
         if (elapsedTimeInLock > 500) {
             log.warn("[NOTIFYME]putMessages in lock cost time(ms)={}, bodyLength={} AppendMessageResult={}", elapsedTimeInLock, messageExtBatch.getBody().length, result);
         }
-
+        //解锁文件
         if (null != unlockMappedFile && this.defaultMessageStore.getMessageStoreConfig().isWarmMapedFileEnable()) {
             this.defaultMessageStore.unlockMappedFile(unlockMappedFile);
         }
 
         PutMessageResult putMessageResult = new PutMessageResult(PutMessageStatus.PUT_OK, result);
-
+        //进行统计
         // Statistics
         storeStatsService.getSinglePutMessageTopicTimesTotal(messageExtBatch.getTopic()).add(result.getMsgNum());
         storeStatsService.getSinglePutMessageTopicSizeTotal(messageExtBatch.getTopic()).add(result.getWroteBytes());
@@ -1217,7 +1227,7 @@ public class CommitLog implements Swappable {
     }
 
     private boolean needHandleHA(MessageExt messageExt) {
-
+        //不需要等待消息存储成功
         if (!messageExt.isWaitStoreMsgOK()) {
             /*
               No need to sync messages that special config to extra broker slaves.
@@ -1225,11 +1235,11 @@ public class CommitLog implements Swappable {
              */
             return false;
         }
-
+        //不启用复制
         if (this.defaultMessageStore.getMessageStoreConfig().isDuplicationEnable()) {
             return false;
         }
-
+        //在异步 或是 主不需要 启用
         if (BrokerRole.SYNC_MASTER != this.defaultMessageStore.getMessageStoreConfig().getBrokerRole()) {
             // No need to check ha in async or slave broker
             return false;
@@ -1240,8 +1250,10 @@ public class CommitLog implements Swappable {
 
     private CompletableFuture<PutMessageResult> handleDiskFlushAndHA(PutMessageResult putMessageResult,
         MessageExt messageExt, int needAckNums, boolean needHandleHA) {
+        //刷新磁盘
         CompletableFuture<PutMessageStatus> flushResultFuture = handleDiskFlush(putMessageResult.getAppendMessageResult(), messageExt);
         CompletableFuture<PutMessageStatus> replicaResultFuture;
+        //不需要高可用 高可用
         if (!needHandleHA) {
             replicaResultFuture = CompletableFuture.completedFuture(PutMessageStatus.PUT_OK);
         } else {
@@ -1249,6 +1261,7 @@ public class CommitLog implements Swappable {
         }
 
         return flushResultFuture.thenCombine(replicaResultFuture, (flushStatus, replicaStatus) -> {
+            //设置刷新成功消息的结果
             if (flushStatus != PutMessageStatus.PUT_OK) {
                 putMessageResult.setPutMessageStatus(flushStatus);
             }
@@ -1258,13 +1271,16 @@ public class CommitLog implements Swappable {
             return putMessageResult;
         });
     }
-
+    /**
+     * 磁盘刷新
+     */
     private CompletableFuture<PutMessageStatus> handleDiskFlush(AppendMessageResult result, MessageExt messageExt) {
         return this.flushManager.handleDiskFlush(result, messageExt);
     }
 
     private CompletableFuture<PutMessageStatus> handleHA(AppendMessageResult result, PutMessageResult putMessageResult,
         int needAckNums) {
+        //需要确认消息数量
         if (needAckNums >= 0 && needAckNums <= 1) {
             return CompletableFuture.completedFuture(PutMessageStatus.PUT_OK);
         }
@@ -1272,7 +1288,7 @@ public class CommitLog implements Swappable {
         HAService haService = this.defaultMessageStore.getHaService();
 
         long nextOffset = result.getWroteOffset() + result.getWroteBytes();
-
+        //等待从备那边获取ack 确认
         // Wait enough acks from different slaves
         GroupCommitRequest request = new GroupCommitRequest(nextOffset, this.defaultMessageStore.getMessageStoreConfig().getSlaveTimeout(), needAckNums);
         haService.putRequest(request);

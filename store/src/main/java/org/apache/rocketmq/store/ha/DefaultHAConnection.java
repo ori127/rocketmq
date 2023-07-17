@@ -34,27 +34,47 @@ public class DefaultHAConnection implements HAConnection {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final DefaultHAService haService;
     private final SocketChannel socketChannel;
+    /**
+     * 客户端地址
+     */
     private final String clientAddress;
     private WriteSocketService writeSocketService;
     private ReadSocketService readSocketService;
+    /**
+     * 连接状态
+     */
     private volatile HAConnectionState currentState = HAConnectionState.TRANSFER;
+    /**
+     * 从请求的偏移量
+     */
     private volatile long slaveRequestOffset = -1;
+    /**
+     * 从确认的偏移量
+     */
     private volatile long slaveAckOffset = -1;
+    /**
+     * 流量监控
+     */
     private FlowMonitor flowMonitor;
 
     public DefaultHAConnection(final DefaultHAService haService, final SocketChannel socketChannel) throws IOException {
         this.haService = haService;
         this.socketChannel = socketChannel;
+        //客户端的地址 非阻塞  setSoLinger close 函数立即返回，操作系统负责把缓冲队列中的数据全
         this.clientAddress = this.socketChannel.socket().getRemoteSocketAddress().toString();
         this.socketChannel.configureBlocking(false);
         this.socketChannel.socket().setSoLinger(false, -1);
+        //采用nagle 算法
         this.socketChannel.socket().setTcpNoDelay(true);
+        //设置客户端 接收方大小
         if (NettySystemConfig.socketSndbufSize > 0) {
             this.socketChannel.socket().setReceiveBufferSize(NettySystemConfig.socketSndbufSize);
         }
+        //设置客户端 发送方大小
         if (NettySystemConfig.socketRcvbufSize > 0) {
             this.socketChannel.socket().setSendBufferSize(NettySystemConfig.socketRcvbufSize);
         }
+        //写服务 服务 增加连接计数 流量监控
         this.writeSocketService = new WriteSocketService(this.socketChannel);
         this.readSocketService = new ReadSocketService(this.socketChannel);
         this.haService.getConnectionCount().incrementAndGet();
@@ -117,8 +137,13 @@ public class DefaultHAConnection implements HAConnection {
     public long getTransferFromWhere() {
         return writeSocketService.getNextTransferFromWhere();
     }
-
+    /**
+     * 守护线程
+     */
     class ReadSocketService extends ServiceThread {
+        /**
+         * byteBufferRead 1M 大小
+         */
         private static final int READ_MAX_BUFFER_SIZE = 1024 * 1024;
         private final Selector selector;
         private final SocketChannel socketChannel;
@@ -156,7 +181,7 @@ public class DefaultHAConnection implements HAConnection {
                     break;
                 }
             }
-
+            //将
             changeCurrentState(HAConnectionState.SHUTDOWN);
 
             this.makeStop();

@@ -359,6 +359,7 @@ public class MessageStoreConfig {
     private boolean haFlowControlEnable = false;
 
     /**
+     * 最大传输字节 为 100M
      * The max speed for one slave when transfer data in ha
      */
     private long maxHaTransferByteInSecond = 100 * 1024 * 1024;

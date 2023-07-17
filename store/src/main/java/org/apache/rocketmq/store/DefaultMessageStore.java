@@ -1260,7 +1260,9 @@ public class DefaultMessageStore implements MessageStore {
         }
 
     }
-
+    /**
+     * 时钟时间戳
+     */
     @Override
     public long now() {
         return this.systemClock.now();
