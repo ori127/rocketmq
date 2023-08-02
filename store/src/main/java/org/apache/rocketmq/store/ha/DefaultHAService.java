@@ -57,6 +57,9 @@ public class DefaultHAService implements HAService {
     protected DefaultMessageStore defaultMessageStore;
 
     protected WaitNotifyObject waitNotifyObject = new WaitNotifyObject();
+    /**
+     * 推送到从的最大偏移量
+     */
     protected AtomicLong push2SlaveMaxOffset = new AtomicLong(0);
 
     protected GroupTransferService groupTransferService;
