@@ -144,7 +144,7 @@ public class DefaultHAConnection implements HAConnection {
         return writeSocketService.getNextTransferFromWhere();
     }
     /**
-     * 守护线程
+     * 守护线程,读取从获取的偏移量
      */
     class ReadSocketService extends ServiceThread {
         /**
@@ -259,7 +259,7 @@ public class DefaultHAConnection implements HAConnection {
                                 DefaultHAConnection.this.slaveRequestOffset = readOffset;
                                 log.info("slave[" + DefaultHAConnection.this.clientAddress + "] request offset " + readOffset);
                             }
-                            //通知传输的偏移量
+                            //通知传输的偏移量 TODO
                             DefaultHAConnection.this.haService.notifyTransferSome(DefaultHAConnection.this.slaveAckOffset);
                         }
                     } else if (readSize == 0) {
@@ -281,7 +281,7 @@ public class DefaultHAConnection implements HAConnection {
         }
     }
     /**
-     * 写线程
+     * 写线程,根据偏移量 获取  byteBuffer 传输数据
      */
     class WriteSocketService extends ServiceThread {
         private final Selector selector;
@@ -389,11 +389,12 @@ public class DefaultHAConnection implements HAConnection {
                     SelectMappedBufferResult selectResult =
                         DefaultHAConnection.this.haService.getDefaultMessageStore().getCommitLogData(this.nextTransferFromWhere);
                     if (selectResult != null) {
+                        //获取数据大小 如果超过批量传输的大小 则以运行批量传输的大小为准
                         int size = selectResult.getSize();
                         if (size > DefaultHAConnection.this.haService.getDefaultMessageStore().getMessageStoreConfig().getHaTransferBatchSize()) {
                             size = DefaultHAConnection.this.haService.getDefaultMessageStore().getMessageStoreConfig().getHaTransferBatchSize();
                         }
-
+                        //计算剩余可以传输的大小 如果超过流量大小 则以流量大小位置
                         int canTransferMaxBytes = flowMonitor.canTransferMaxByteNum();
                         if (size > canTransferMaxBytes) {
                             if (System.currentTimeMillis() - lastPrintTimestamp > 1000) {
@@ -404,20 +405,20 @@ public class DefaultHAConnection implements HAConnection {
                             }
                             size = canTransferMaxBytes;
                         }
-
+                        //记录下次传输便宜的位置
                         long thisOffset = this.nextTransferFromWhere;
                         this.nextTransferFromWhere += size;
-                        
+                        //截取要传输的数据映射
                         selectResult.getByteBuffer().limit(size);
                         this.selectMappedBufferResult = selectResult;
-
+                        //构建头信息 为 偏移量 + 传输内容的大小
                         // Build Header
                         this.byteBufferHeader.position(0);
                         this.byteBufferHeader.limit(headerSize);
                         this.byteBufferHeader.putLong(thisOffset);
                         this.byteBufferHeader.putInt(size);
                         this.byteBufferHeader.flip();
-                        
+                        //进行传输
                         this.lastWriteOver = this.transferData();
                     } else {
                         

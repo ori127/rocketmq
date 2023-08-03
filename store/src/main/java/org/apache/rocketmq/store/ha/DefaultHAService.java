@@ -81,7 +81,9 @@ public class DefaultHAService implements HAService {
         }
         this.haConnectionStateNotificationService = new HAConnectionStateNotificationService(this, defaultMessageStore);
     }
-
+    /**
+     * 
+     */
     @Override
     public void updateMasterAddress(final String newAddr) {
         if (this.haClient != null) {
