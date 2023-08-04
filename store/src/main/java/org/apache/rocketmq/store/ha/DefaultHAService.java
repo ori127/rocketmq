@@ -140,7 +140,9 @@ public class DefaultHAService implements HAService {
             this.haClient.start();
         }
     }
-
+    /**
+     * 添加连接集合
+     */
     public void addConnection(final HAConnection conn) {
         synchronized (this.connectionList) {
             this.connectionList.add(conn);
@@ -159,6 +161,7 @@ public class DefaultHAService implements HAService {
         if (this.haClient != null) {
             this.haClient.shutdown();
         }
+        
         this.acceptSocketService.shutdown(true);
         this.destroyConnections();
         this.groupTransferService.shutdown();
@@ -264,7 +267,9 @@ public class DefaultHAService implements HAService {
         }
         return info;
     }
-
+    /**
+     * 默认的接收连接服务 创建DefaultHAConnection
+     */
     class DefaultAcceptSocketService extends AcceptSocketService {
 
         public DefaultAcceptSocketService(final MessageStoreConfig messageStoreConfig) {
@@ -286,6 +291,7 @@ public class DefaultHAService implements HAService {
     }
 
     /**
+     * 监听从 创建链接 接收
      * Listens to slave connections to create {@link HAConnection}.
      */
     protected abstract class AcceptSocketService extends ServiceThread {
@@ -308,8 +314,10 @@ public class DefaultHAService implements HAService {
         public void beginAccept() throws Exception {
             this.serverSocketChannel = ServerSocketChannel.open();
             this.selector = RemotingUtil.openSelector();
+            //TODO::端口重用 绑定监听地址
             this.serverSocketChannel.socket().setReuseAddress(true);
             this.serverSocketChannel.socket().bind(this.socketAddressListen);
+            //获取本地监听地址 配置本地地址 
             if (0 == messageStoreConfig.getHaListenPort()) {
                 messageStoreConfig.setHaListenPort(this.serverSocketChannel.socket().getLocalPort());
                 log.info("OS picked up {} to listen for HA", messageStoreConfig.getHaListenPort());
@@ -319,6 +327,7 @@ public class DefaultHAService implements HAService {
         }
 
         /**
+         * 进行关闭
          * {@inheritDoc}
          */
         @Override
@@ -350,6 +359,7 @@ public class DefaultHAService implements HAService {
                     Set<SelectionKey> selected = this.selector.selectedKeys();
 
                     if (selected != null) {
+                        //遍历 selected
                         for (SelectionKey k : selected) {
                             if ((k.readyOps() & SelectionKey.OP_ACCEPT) != 0) {
                                 SocketChannel sc = ((ServerSocketChannel) k.channel()).accept();
@@ -358,6 +368,7 @@ public class DefaultHAService implements HAService {
                                     DefaultHAService.log.info("HAService receive new connection, "
                                         + sc.socket().getRemoteSocketAddress());
                                     try {
+                                        //建立连接 进传输消息 添加改连接集合
                                         HAConnection conn = createConnection(sc);
                                         conn.start();
                                         DefaultHAService.this.addConnection(conn);
@@ -370,7 +381,7 @@ public class DefaultHAService implements HAService {
                                 log.warn("Unexpected ops in select " + k.readyOps());
                             }
                         }
-
+                        //清理 selected
                         selected.clear();
                     }
                 } catch (Exception e) {
