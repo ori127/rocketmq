@@ -29,6 +29,10 @@ import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
 
 /**
+ * 条目文件工具 类  格式如下
+ * 第一行 为 条目的数量
+ * 第二行 为 条目的校验和
+ * 第三行 为 具体条目数据
  * Entry Checkpoint file util
  * Format:
  * <li>First line:  Entries size
@@ -47,7 +51,13 @@ public class CheckpointFile<T> {
      * Not check crc32 when value is 0
      */
     private static final int NOT_CHECK_CRC_MAGIC_CODE = 0;
+    /**
+     * 文件路径
+     */
     private final String filePath;
+    /**
+     * 检查点 序列化 方式
+     */
     private final CheckpointSerializer<T> serializer;
 
     public interface CheckpointSerializer<T> {
@@ -67,18 +77,27 @@ public class CheckpointFile<T> {
         this.serializer = serializer;
     }
 
+    /**
+     * 获取备份文件路径
+     * @return
+     */
     public String getBackFilePath() {
         return this.filePath + ".bak";
     }
 
     /**
      * Write entries to file
+     *  条目数量 + 系统分割符号  + 校验和 + 系统分割符 + 条目内容
+     *  写入 文件
      */
     public void write(final List<T> entries) throws IOException {
         if (entries.isEmpty()) {
             return;
         }
+        //上锁进行写入
         synchronized (this) {
+            //遍历条目 进行 序列化 添加分割符 拼接内容  然后根据 求 crc32 校验和
+            // 条目数量 + 系统分割符号  + 校验和 + 系统分割符 + 条目内容
             StringBuilder entryContent = new StringBuilder();
             for (T entry : entries) {
                 final String line = this.serializer.toLine(entry);
@@ -97,16 +116,20 @@ public class CheckpointFile<T> {
 
     private List<T> read(String filePath) throws IOException {
         final ArrayList<T> result = new ArrayList<>();
+        //上锁 进行读取
         synchronized (this) {
             final File file = new File(filePath);
             if (!file.exists()) {
                 return result;
             }
+            //根据文件路径进行读取
             try (BufferedReader reader = Files.newBufferedReader(file.toPath())) {
                 // Read size
+                // 读取具体的条目 数量
                 int expectedLines = Integer.parseInt(reader.readLine());
 
                 // Read block crc
+                // 读取对的校验和
                 int expectedCrc32 = Integer.parseInt(reader.readLine());
 
                 // Read entries
@@ -139,10 +162,12 @@ public class CheckpointFile<T> {
     }
 
     /**
+     * 从文件当中读取具体的条目
      * Read entries from file
      */
     public List<T> read() throws IOException {
         try {
+            //根据路径进行读取 如过为空则从 备份文件当中读取
             List<T> result = this.read(this.filePath);
             if (CollectionUtils.isEmpty(result)) {
                 result = this.read(this.getBackFilePath());

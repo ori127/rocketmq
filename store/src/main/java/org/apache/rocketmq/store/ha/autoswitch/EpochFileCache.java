@@ -38,10 +38,22 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
  */
 public class EpochFileCache {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    /**
+     * 读写锁
+     */
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+    /**
+     * 读锁
+     */
     private final Lock readLock = this.readWriteLock.readLock();
+    /**
+     * 写锁
+     */
     private final Lock writeLock = this.readWriteLock.writeLock();
     private final TreeMap<Integer, EpochEntry> epochMap;
+    /**
+     * 检查点文件路径
+     */
     private CheckpointFile<EpochEntry> checkpoint;
 
     public EpochFileCache() {
