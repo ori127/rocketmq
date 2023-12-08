@@ -21,9 +21,17 @@ import java.util.Objects;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class EpochEntry extends RemotingSerializable {
-
+    /**
+     * 代数
+     */
     private int epoch;
+    /**
+     * 开始偏移量
+     */
     private long startOffset;
+    /**
+     * 结束偏移量
+     */
     private long endOffset = Long.MAX_VALUE;
 
     public EpochEntry(EpochEntry entry) {

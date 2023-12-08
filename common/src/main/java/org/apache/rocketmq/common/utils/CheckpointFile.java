@@ -48,6 +48,7 @@ import org.apache.rocketmq.common.UtilAll;
 public class CheckpointFile<T> {
 
     /**
+     * 不需要检验校验和 则 crc32 值 为 0
      * Not check crc32 when value is 0
      */
     private static final int NOT_CHECK_CRC_MAGIC_CODE = 0;
@@ -131,7 +132,7 @@ public class CheckpointFile<T> {
                 // Read block crc
                 // 读取对的校验和
                 int expectedCrc32 = Integer.parseInt(reader.readLine());
-
+                //读取剩下的条目
                 // Read entries
                 StringBuilder sb = new StringBuilder();
                 String line = reader.readLine();
@@ -143,14 +144,15 @@ public class CheckpointFile<T> {
                     }
                     line = reader.readLine();
                 }
+                //计算现在的校验和
                 int truthCrc32 = UtilAll.crc32(sb.toString().getBytes(StandardCharsets.UTF_8));
-
+                //如果读取条目 数量 和 实际对不上
                 if (result.size() != expectedLines) {
                     final String err = String.format(
                         "Expect %d entries, only found %d entries", expectedLines, result.size());
                     throw new IOException(err);
                 }
-
+                //校验和没有匹配
                 if (NOT_CHECK_CRC_MAGIC_CODE != expectedCrc32 && truthCrc32 != expectedCrc32) {
                     final String err = String.format(
                         "Entries crc32 not match, file=%s, truth=%s", expectedCrc32, truthCrc32);

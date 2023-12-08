@@ -50,6 +50,9 @@ public class EpochFileCache {
      * 写锁
      */
     private final Lock writeLock = this.readWriteLock.writeLock();
+    /**
+     * Key 为 代数 ,value 为具体的 EpochEntry
+     */
     private final TreeMap<Integer, EpochEntry> epochMap;
     /**
      * 检查点文件路径
@@ -60,14 +63,24 @@ public class EpochFileCache {
         this.epochMap = new TreeMap<>();
     }
 
+    /**
+     * 根据文件路径恢复 EpochEntry
+     * @param path
+     */
     public EpochFileCache(final String path) {
         this.epochMap = new TreeMap<>();
         this.checkpoint = new CheckpointFile<>(path, new EpochEntrySerializer());
     }
 
+    /**
+     * 从检查点文件读取提条目 初始化条目
+     * @return
+     */
     public boolean initCacheFromFile() {
+        //上锁 从检查点文件读取提条目 初始化条目
         this.writeLock.lock();
         try {
+            //从检查点文件读取提条目 初始化条目
             final List<EpochEntry> entries = this.checkpoint.read();
             initEntries(entries);
             return true;
@@ -79,6 +92,10 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 初始条目 写入磁盘
+     * @param entries
+     */
     public void initCacheFromEntries(final List<EpochEntry> entries) {
         this.writeLock.lock();
         try {
@@ -89,6 +106,10 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 初始化 epochMap key 为 代数 并设置 链上的 结束偏移量
+     * @param entries
+     */
     private void initEntries(final List<EpochEntry> entries) {
         this.epochMap.clear();
         EpochEntry preEntry = null;
@@ -101,6 +122,11 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 获取 epochMap 的数量
+     * @return
+     */
+
     public int getEntrySize() {
         this.readLock.lock();
         try {
@@ -110,10 +136,16 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 添加条目
+     * @param entry
+     * @return
+     */
     public boolean appendEntry(final EpochEntry entry) {
         this.writeLock.lock();
         try {
             if (!this.epochMap.isEmpty()) {
+                //获取最后一个 EpochEntry 校验添加的 EpochEntry 的偏移量 和 代数 是否 比最后 一个 EpochEntry 的 开始的偏移量 和 代数 大
                 final EpochEntry lastEntry = this.epochMap.lastEntry().getValue();
                 if (lastEntry.getEpoch() >= entry.getEpoch() || lastEntry.getStartOffset() >= entry.getStartOffset()) {
                     log.error("The appending entry's lastEpoch or endOffset {} is not bigger than lastEntry {}, append failed", entry, lastEntry);
@@ -130,6 +162,7 @@ public class EpochFileCache {
     }
 
     /**
+     * 设置最后一个条目 结束偏移量
      * Set endOffset for lastEpochEntry.
      */
     public void setLastEpochEntryEndOffset(final long endOffset) {
@@ -146,6 +179,10 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 获取第一个条目
+     * @return
+     */
     public EpochEntry firstEntry() {
         this.readLock.lock();
         try {
@@ -158,6 +195,10 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 获取最后一个条目
+     * @return
+     */
     public EpochEntry lastEntry() {
         this.readLock.lock();
         try {
@@ -170,6 +211,10 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 最后一个代数
+     * @return
+     */
     public int lastEpoch() {
         final EpochEntry entry = lastEntry();
         if (entry != null) {
@@ -178,6 +223,11 @@ public class EpochFileCache {
         return -1;
     }
 
+    /**
+     * 根据代数 获取 条目
+     * @param epoch
+     * @return
+     */
     public EpochEntry getEntry(final int epoch) {
         this.readLock.lock();
         try {
@@ -195,6 +245,7 @@ public class EpochFileCache {
         this.readLock.lock();
         try {
             if (!this.epochMap.isEmpty()) {
+                //遍历 epochMap 查找 offset 所在的 EpochEntry
                 for (Map.Entry<Integer, EpochEntry> entry : this.epochMap.entrySet()) {
                     if (entry.getValue().getStartOffset() <= offset && entry.getValue().getEndOffset() > offset) {
                         return new EpochEntry(entry.getValue());
@@ -207,6 +258,11 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 根据 epoch 获取下一个 EpochEntry
+     * @param epoch
+     * @return
+     */
     public EpochEntry nextEntry(final int epoch) {
         this.readLock.lock();
         try {
@@ -220,6 +276,10 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 获取所有的EpochEntry
+     * @return
+     */
     public List<EpochEntry> getAllEntries() {
         this.readLock.lock();
         try {
@@ -257,6 +317,7 @@ public class EpochFileCache {
     }
 
     /**
+     * 删除 代数 大于 truncateEpoch 的 条目
      * Remove epochEntries with epoch >= truncateEpoch.
      */
     public void truncateSuffixByEpoch(final int truncateEpoch) {
@@ -265,13 +326,16 @@ public class EpochFileCache {
     }
 
     /**
+     * 删除 开始偏移 大于truncateOffset 的条目
      * Remove epochEntries with startOffset >= truncateOffset.
      */
     public void truncateSuffixByOffset(final long truncateOffset) {
         Predicate<EpochEntry> predict = entry -> entry.getStartOffset() >= truncateOffset;
         doTruncateSuffix(predict);
     }
-
+    /**
+     *  从 epochMap 移除 符合条件的条目 设置最后一个条目的偏移量 为最大 然后刷新磁盘
+     */
     private void doTruncateSuffix(Predicate<EpochEntry> predict) {
         this.writeLock.lock();
         try {
@@ -287,6 +351,7 @@ public class EpochFileCache {
     }
 
     /**
+     * 从 epochMap 移除 结束偏移量  小于  truncateOffset 的条目 然后刷新磁盘
      * Remove epochEntries with endOffset <= truncateOffset.
      */
     public void truncatePrefixByOffset(final long truncateOffset) {
@@ -300,6 +365,9 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * 将条目写入磁盘
+     */
     private void flush() {
         this.writeLock.lock();
         try {
@@ -314,6 +382,9 @@ public class EpochFileCache {
         }
     }
 
+    /**
+     * EpochEntry 的序列化 方式 采用 %d(袋数)-%d(开始偏移量)
+     */
     static class EpochEntrySerializer implements CheckpointFile.CheckpointSerializer<EpochEntry> {
 
         @Override

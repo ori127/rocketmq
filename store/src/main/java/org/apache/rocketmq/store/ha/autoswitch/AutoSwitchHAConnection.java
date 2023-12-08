@@ -44,18 +44,36 @@ public class AutoSwitchHAConnection implements HAConnection {
      * Header protocol in syncing msg from master. Format: current state + body size + offset + epoch  +
      * epochStartOffset + additionalInfo(confirmOffset). If the msg is handShakeMsg, the body size = EpochEntrySize *
      * EpochEntryNums, the offset is maxOffset in master.
+     * 4 字节连接状态枚举值 + 4 字节 所有epochEntries 大小  + 8 字节的最大 偏移量 + 4个字节 最大 Epoch + 8个 字节 + 8个 字节 Epoch 开始偏移量 + 8 个字节 附加信息 确认的偏移量
      */
     public static final int MSG_HEADER_SIZE = 4 + 4 + 8 + 4 + 8 + 8;
+    /**
+     * EpochEntry的大小 4个字节 代数 8个 字节的开始 偏移量 结束偏移量由下 entry 进行计算
+     */
     public static final int EPOCH_ENTRY_SIZE = 12;
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final AutoSwitchHAService haService;
+    /**
+     * 客户端对应的SocketChannel
+     */
     private final SocketChannel socketChannel;
+    /**
+     * 客户端地址
+     */
     private final String clientAddress;
+    /**
+     * EpochFile
+     */
     private final EpochFileCache epochCache;
     private final AbstractWriteSocketService writeSocketService;
     private final ReadSocketService readSocketService;
+    /**
+     * 流量监控
+     */
     private final FlowMonitor flowMonitor;
-
+    /**
+     * 连接状态
+     */
     private volatile HAConnectionState currentState = HAConnectionState.HANDSHAKE;
     private volatile long slaveRequestOffset = -1;
     private volatile long slaveAckOffset = -1;
@@ -63,6 +81,9 @@ public class AutoSwitchHAConnection implements HAConnection {
      * Whether the slave have already sent a handshake message
      */
     private volatile boolean isSlaveSendHandshake = false;
+    /**
+     * 当前传输的代数
+     */
     private volatile int currentTransferEpoch = -1;
     private volatile long currentTransferEpochEndOffset = 0;
     private volatile boolean isSyncFromLastFile = false;
@@ -202,20 +223,37 @@ public class AutoSwitchHAConnection implements HAConnection {
     }
 
     class ReadSocketService extends ServiceThread {
+        /**
+         * 1MB大小
+         */
         private static final int READ_MAX_BUFFER_SIZE = 1024 * 1024;
+        /**
+         * 绑定的 selector
+         */
         private final Selector selector;
+        /**
+         * 客户端的 SocketChannel
+         */
         private final SocketChannel socketChannel;
+        /**
+         * 1MB大小
+         */
         private final ByteBuffer byteBufferRead = ByteBuffer.allocate(READ_MAX_BUFFER_SIZE);
         private final AbstractHAReader haReader;
         private int processPosition = 0;
+        /**
+         * 最近读取时间
+         */
         private volatile long lastReadTimestamp = System.currentTimeMillis();
 
         public ReadSocketService(final SocketChannel socketChannel) throws IOException {
+            //socketChannel注册读事件
             this.selector = RemotingUtil.openSelector();
             this.socketChannel = socketChannel;
             this.socketChannel.register(this.selector, SelectionKey.OP_READ);
             this.setDaemon(true);
             haReader = new HAServerReader();
+            //注册钩子 记录最近读取记录
             haReader.registerHook(readSize -> {
                 if (readSize > 0) {
                     ReadSocketService.this.lastReadTimestamp =
@@ -231,12 +269,13 @@ public class AutoSwitchHAConnection implements HAConnection {
             while (!this.isStopped()) {
                 try {
                     this.selector.select(1000);
+                    //从 socketChannel 进行读取
                     boolean ok = this.haReader.read(this.socketChannel, this.byteBufferRead);
                     if (!ok) {
                         AutoSwitchHAConnection.LOGGER.error("processReadEvent error");
                         break;
                     }
-
+                    //超过读取间隔 时间
                     long interval = haService.getDefaultMessageStore().getSystemClock().now() - this.lastReadTimestamp;
                     if (interval > haService.getDefaultMessageStore().getMessageStoreConfig().getHaHousekeepingInterval()) {
                         LOGGER.warn("ha housekeeping, found this connection[" + clientAddress + "] expired, " + interval);
@@ -249,21 +288,22 @@ public class AutoSwitchHAConnection implements HAConnection {
             }
 
             this.makeStop();
-
+            //将状态设置关闭
             changeCurrentState(HAConnectionState.SHUTDOWN);
-
+            //关闭写服务
             writeSocketService.makeStop();
-
+            //从haService 移除该链接
             haService.removeConnection(AutoSwitchHAConnection.this);
-
+            //减少是链接计数
             haService.getConnectionCount().decrementAndGet();
-
+            //取消 SelectionKey 的注册
             SelectionKey sk = this.socketChannel.keyFor(this.selector);
             if (sk != null) {
                 sk.cancel();
             }
 
             try {
+                //关闭 selector 和  socketChannel
                 this.selector.close();
                 this.socketChannel.close();
             } catch (IOException e) {
@@ -438,16 +478,21 @@ public class AutoSwitchHAConnection implements HAConnection {
         private final ByteBuffer handShakeBuffer = ByteBuffer.allocate(EPOCH_ENTRY_SIZE * 1000);
         protected long nextTransferFromWhere = -1;
         protected boolean lastWriteOver = true;
+        /**
+         * 最近写出时间
+         */
         protected long lastWriteTimestamp = System.currentTimeMillis();
         protected long lastPrintTimestamp = System.currentTimeMillis();
         protected long transferOffset = 0;
 
         public AbstractWriteSocketService(final SocketChannel socketChannel) throws IOException {
+            //创建 selector 注册 写事件
             this.selector = RemotingUtil.openSelector();
             this.socketChannel = socketChannel;
             this.socketChannel.register(this.selector, SelectionKey.OP_WRITE);
             this.setDaemon(true);
             haWriter = new HAWriter();
+            //注册钩子 记录最近读写出时间
             haWriter.registerHook(writeSize -> {
                 flowMonitor.addByteCountTransferred(writeSize);
                 if (writeSize > 0) {
@@ -462,25 +507,30 @@ public class AutoSwitchHAConnection implements HAConnection {
         }
 
         private boolean buildHandshakeBuffer() {
+            //获取最后一个 EpochEntry
             final List<EpochEntry> epochEntries = AutoSwitchHAConnection.this.epochCache.getAllEntries();
             final int lastEpoch = AutoSwitchHAConnection.this.epochCache.lastEpoch();
+            //最大偏移量
             final long maxPhyOffset = AutoSwitchHAConnection.this.haService.getDefaultMessageStore().getMaxPhyOffset();
             this.byteBufferHeader.position(0);
             this.byteBufferHeader.limit(MSG_HEADER_SIZE);
+            //4个字节 链接当前状态的 枚举值值
             // State
             this.byteBufferHeader.putInt(currentState.ordinal());
+            //4个 字节 epochEntries 大小
             // Body size
             this.byteBufferHeader.putInt(epochEntries.size() * EPOCH_ENTRY_SIZE);
-            // Offset
+            // Offset 8 字节 最大偏移量
             this.byteBufferHeader.putLong(maxPhyOffset);
-            // Epoch
+            // Epoch 4个字节 最大 Epoch
             this.byteBufferHeader.putInt(lastEpoch);
             // EpochStartOffset (not needed in handshake)
             this.byteBufferHeader.putLong(0L);
             // Additional info (not needed in handshake)
             this.byteBufferHeader.putLong(0L);
             this.byteBufferHeader.flip();
-
+            // 4 字节连接状态枚举值 + 4 字节 所有epochEntries 大小  + 8 字节的最大 偏移量 + 4个字节 最大 Epoch + 8个 字节 + 8个 字节 Epoch 开始偏移量 + 8 个字节 附加信息 确认的偏移量
+            // 将 epochEntries 写入 handShakeBuffer
             // EpochEntries
             this.handShakeBuffer.position(0);
             this.handShakeBuffer.limit(EPOCH_ENTRY_SIZE * epochEntries.size());
@@ -497,12 +547,13 @@ public class AutoSwitchHAConnection implements HAConnection {
 
         private boolean handshakeWithSlave() throws IOException {
             // Write Header
+            // 写头信息
             boolean result = this.haWriter.write(this.socketChannel, this.byteBufferHeader);
 
             if (!result) {
                 return false;
             }
-
+            // 写入 body
             // Write Body
             return this.haWriter.write(this.socketChannel, this.handShakeBuffer);
         }
@@ -528,7 +579,7 @@ public class AutoSwitchHAConnection implements HAConnection {
             // Build Header
             this.byteBufferHeader.position(0);
             this.byteBufferHeader.limit(MSG_HEADER_SIZE);
-            // State
+            // State 4个字节 链接当前状态的 枚举值值
             this.byteBufferHeader.putInt(currentState.ordinal());
             // Body size
             this.byteBufferHeader.putInt(bodySize);
@@ -545,6 +596,7 @@ public class AutoSwitchHAConnection implements HAConnection {
         }
 
         private boolean sendHeartbeatIfNeeded() throws Exception {
+            //间隔时间 是否需要发送心跳消息 构建发送心跳消息
             long interval = haService.getDefaultMessageStore().getSystemClock().now() - this.lastWriteTimestamp;
             if (interval > haService.getDefaultMessageStore().getMessageStoreConfig().getHaSendHeartbeatInterval()) {
                 buildTransferHeaderBuffer(this.nextTransferFromWhere, 0);
