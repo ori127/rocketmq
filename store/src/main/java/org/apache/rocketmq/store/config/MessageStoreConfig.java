@@ -41,6 +41,9 @@ public class MessageStoreConfig {
     private String storePathDLedgerCommitLog = null;
 
     //The directory in which the epochFile is kept
+    /**
+     * 保存 epochFile 文件的目录
+     */
     @ImportantField
     private String storePathEpochFile = System.getProperty("user.home") + File.separator + "store"
         + File.separator + "epochFileCheckpoint";
@@ -174,6 +177,9 @@ public class MessageStoreConfig {
     // Flush page size when the disk in warming state
     private int flushLeastPagesWhenWarmMapedFile = 1024 / 4 * 16;
     // How many pages are to be flushed when flush ConsumeQueue
+    /**
+     * 刷新消息队列至少多少页数
+     */
     private int flushConsumeQueueLeastPages = 2;
     /**
      * 刷新提交日志的完整间隔
@@ -183,6 +189,9 @@ public class MessageStoreConfig {
      * 提交提交日志的完整间隔
      */
     private int commitCommitLogThoroughInterval = 200;
+    /**
+     * 刷新消费队列 间隔时间
+     */
     private int flushConsumeQueueThoroughInterval = 1000 * 60;
     @ImportantField
     private int maxTransferBytesOnMessageInMemory = 1024 * 256;
@@ -205,6 +214,7 @@ public class MessageStoreConfig {
     private int haSendHeartbeatInterval = 1000 * 5;
     private int haHousekeepingInterval = 1000 * 20;
     /**
+     * 传输到 slave 的最大 字节 为 32M
      * Maximum size of data to transfer to slave.
      * NOTE: cannot be larger than HAClient.READ_MAX_BUFFER_SIZE
      */
@@ -365,6 +375,7 @@ public class MessageStoreConfig {
     private long maxHaTransferByteInSecond = 100 * 1024 * 1024;
 
     /**
+     * slave 追赶 master 最大间隙时间
      * The max gap time that slave doesn't catch up to master.
      */
     private long haMaxTimeSlaveNotCatchup = 1000 * 15;

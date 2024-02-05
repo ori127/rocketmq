@@ -300,6 +300,7 @@ public class EpochFileCache {
         this.readLock.lock();
         try {
             long consistentOffset = -1;
+            //进行逆序 遍历 从后往前  找到compareCache  先对应的 Epoch相同的的 EpochEntry 找到他们开始偏移量 最小的介绍偏移量
             final Map<Integer, EpochEntry> descendingMap = new TreeMap<>(this.epochMap).descendingMap();
             final Iterator<Map.Entry<Integer, EpochEntry>> iter = descendingMap.entrySet().iterator();
             while (iter.hasNext()) {

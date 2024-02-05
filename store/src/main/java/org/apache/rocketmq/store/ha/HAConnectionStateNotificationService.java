@@ -26,6 +26,7 @@ import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.config.BrokerRole;
 
 /**
+ * 服务定期检查 并且 通知特定的连接状态。
  * Service to periodically check and notify for certain connection state.
  */
 public class HAConnectionStateNotificationService extends ServiceThread {

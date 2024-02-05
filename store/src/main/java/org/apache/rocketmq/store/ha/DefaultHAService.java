@@ -58,14 +58,18 @@ public class DefaultHAService implements HAService {
 
     protected WaitNotifyObject waitNotifyObject = new WaitNotifyObject();
     /**
-     * 推送到从的最大偏移量
+     * 推送到 salve的最大偏移量
      */
     protected AtomicLong push2SlaveMaxOffset = new AtomicLong(0);
 
     protected GroupTransferService groupTransferService;
-
+    /**
+     * masterClient
+     */
     protected HAClient haClient;
-
+    /**
+     * 连接状态通知服务
+     */
     protected HAConnectionStateNotificationService haConnectionStateNotificationService;
 
     public DefaultHAService() {
@@ -114,6 +118,7 @@ public class DefaultHAService implements HAService {
     }
 
     public void notifyTransferSome(final long offset) {
+        //超过当期推送 salve 最大 偏移量 自旋 cas 更新推送到 salve 最大偏移量
         for (long value = this.push2SlaveMaxOffset.get(); offset > value; ) {
             boolean ok = this.push2SlaveMaxOffset.compareAndSet(value, offset);
             if (ok) {
@@ -168,6 +173,9 @@ public class DefaultHAService implements HAService {
         this.haConnectionStateNotificationService.shutdown();
     }
 
+    /**
+     * 关闭所有连接
+     */
     public void destroyConnections() {
         synchronized (this.connectionList) {
             for (HAConnection c : this.connectionList) {

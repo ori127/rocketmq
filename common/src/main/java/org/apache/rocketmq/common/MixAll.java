@@ -99,6 +99,9 @@ public class MixAll {
      */
     public static final long CURRENT_JVM_PID = getPID();
     public final static int UNIT_PRE_SIZE_FOR_MSG = 28;
+    /**
+     * 需要 所有 同步 状态 ack 确认
+     */
     public final static int ALL_ACK_IN_SYNC_STATE_SET = -1;
     /**
      * 重试 topic 前缀

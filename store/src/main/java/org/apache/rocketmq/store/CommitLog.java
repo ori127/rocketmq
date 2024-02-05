@@ -1623,6 +1623,9 @@ public class CommitLog implements Swappable {
          */
         // Indicate the GroupCommitRequest result: true or false
         private final CompletableFuture<PutMessageStatus> flushOKFuture = new CompletableFuture<>();
+        /**
+         * 请求 ack 数量
+         */
         private volatile int ackNums = 1;
         /**
          * 截止时间

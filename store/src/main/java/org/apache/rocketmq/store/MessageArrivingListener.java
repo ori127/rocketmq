@@ -19,6 +19,9 @@ package org.apache.rocketmq.store;
 
 import java.util.Map;
 
+/**
+ * 消息到达监听器
+ */
 public interface MessageArrivingListener {
 
     /**

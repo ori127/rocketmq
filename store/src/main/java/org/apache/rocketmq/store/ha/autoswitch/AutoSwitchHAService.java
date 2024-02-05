@@ -53,14 +53,32 @@ import org.apache.rocketmq.store.ha.HAConnectionStateNotificationService;
 public class AutoSwitchHAService extends DefaultHAService {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final ExecutorService executorService = Executors.newSingleThreadExecutor(new ThreadFactoryImpl("AutoSwitchHAService_Executor_"));
+    /**
+     * 同步状态 监听者 列表
+     */
     private final List<Consumer<Set<String>>> syncStateSetChangedListeners = new ArrayList<>();
+    /**
+     * 同步 slave 地址 集合
+     */
     private final CopyOnWriteArraySet<String> syncStateSet = new CopyOnWriteArraySet<>();
+    /**
+     * key 为备用地址, value 为 最近 同步偏移量 追赶上 master的偏移量的时间
+     */
     private final ConcurrentHashMap<String, Long> connectionCaughtUpTimeTable = new ConcurrentHashMap<>();
+    /**
+     * 提交的偏移量
+     */
     private volatile long confirmOffset = -1;
+    /**
+     * 本地地址
+     */
 
     private String localAddress;
 
     private EpochFileCache epochCache;
+    /**
+     * 与 master 连接的 客户端
+     */
     private AutoSwitchHAClient haClient;
 
     public AutoSwitchHAService() {
@@ -105,22 +123,24 @@ public class AutoSwitchHAService extends DefaultHAService {
             LOGGER.warn("newMasterEpoch {} < lastEpoch {}, fail to change to master", masterEpoch, lastEpoch);
             return false;
         }
+        //关闭所有连接 如果有客户端 则进行 关闭
         destroyConnections();
         // Stop ha client if needed
         if (this.haClient != null) {
             this.haClient.shutdown();
         }
-
+        //截断 脏 文件
         // Truncate dirty file
         final long truncateOffset = truncateInvalidMsg();
-
+        //重新计算偏移量 更新提交的偏移量
         updateConfirmOffset(computeConfirmOffset());
-
+        //截断 truncateOffset 的 EpochEntry
         if (truncateOffset >= 0) {
             this.epochCache.truncateSuffixByOffset(truncateOffset);
         }
 
         // Append new epoch to epochFile
+        //添加新的 masterEpoch 丢弃 masterEpoch 之后的 EpochEntry
         final EpochEntry newEpochEntry = new EpochEntry(masterEpoch, this.defaultMessageStore.getMaxPhyOffset());
         if (this.epochCache.lastEpoch() >= masterEpoch) {
             this.epochCache.truncateSuffixByEpoch(masterEpoch);
@@ -151,6 +171,7 @@ public class AutoSwitchHAService extends DefaultHAService {
             return false;
         }
         try {
+            //关闭 slave 的连接
             destroyConnections();
             if (this.haClient == null) {
                 this.haClient = new AutoSwitchHAClient(this, defaultMessageStore, this.epochCache);
@@ -159,8 +180,10 @@ public class AutoSwitchHAService extends DefaultHAService {
             }
             this.haClient.setLocalAddress(this.localAddress);
             this.haClient.updateSlaveId(slaveId);
+            //设置 master地址
             this.haClient.updateMasterAddress(newMasterAddr);
             this.haClient.updateHaMasterAddress(null);
+            //启动 与 master 的 客户端
             this.haClient.start();
             LOGGER.info("Change ha to slave success, newMasterAddress:{}, newMasterEpoch:{}", newMasterAddr, newMasterEpoch);
             return true;
@@ -186,10 +209,18 @@ public class AutoSwitchHAService extends DefaultHAService {
     public void updateMasterAddress(String newAddr) {
     }
 
+    /**
+     * 添加监听者
+     * @param listener
+     */
     public void registerSyncStateSetChangedListener(final Consumer<Set<String>> listener) {
         this.syncStateSetChangedListeners.add(listener);
     }
 
+    /**
+     * 通知 同步状态 同步状态发生改变
+     * @param newSyncStateSet
+     */
     public void notifySyncStateSetChanged(final Set<String> newSyncStateSet) {
         this.executorService.submit(() -> {
             for (Consumer<Set<String>> listener : syncStateSetChangedListeners) {
@@ -204,7 +235,9 @@ public class AutoSwitchHAService extends DefaultHAService {
      */
     public Set<String> maybeShrinkInSyncStateSet() {
         final Set<String> newSyncStateSet = getSyncStateSet();
+        //slave 追赶 master 最大间隙时间
         final long haMaxTimeSlaveNotCatchup = this.defaultMessageStore.getMessageStoreConfig().getHaMaxTimeSlaveNotCatchup();
+        //遍历 connectionCaughtUpTimeTable 如果 追赶master时间 超过最大 间隙时间 则 移除 newSyncStateSet
         for (Map.Entry<String, Long> next : this.connectionCaughtUpTimeTable.entrySet()) {
             final String slaveAddress = next.getKey();
             if (newSyncStateSet.contains(slaveAddress)) {
@@ -226,11 +259,14 @@ public class AutoSwitchHAService extends DefaultHAService {
         if (currentSyncStateSet.contains(slaveAddress)) {
             return;
         }
+        //获取 所有 salve 的 最小提交的偏移量
         final long confirmOffset = getConfirmOffset();
+        //如果 slave 最大偏移量 大于 当前 salve 集合 最小偏移量 并且 大于  Leader 最后的 EpochEntry 开始 偏移量 则将其加入 同步集合 通知同步集合
         if (slaveMaxOffset >= confirmOffset) {
             final EpochEntry currentLeaderEpoch = this.epochCache.lastEntry();
             if (slaveMaxOffset >= currentLeaderEpoch.getStartOffset()) {
                 currentSyncStateSet.add(slaveAddress);
+                //通知 同步状态的 集合已经 发生改变
                 // Notify the upper layer that syncStateSet changed.
                 notifySyncStateSetChanged(currentSyncStateSet);
             }
@@ -238,19 +274,23 @@ public class AutoSwitchHAService extends DefaultHAService {
     }
 
     public void updateConnectionLastCaughtUpTime(final String slaveAddress, final long lastCaughtUpTimeMs) {
+        //先获取 上次最赶上的 时间 如果不存在 则先用 0 进行占位
         Long prevTime = ConcurrentHashMapUtils.computeIfAbsent(this.connectionCaughtUpTimeTable, slaveAddress, k -> 0L);
         this.connectionCaughtUpTimeTable.put(slaveAddress, Math.max(prevTime, lastCaughtUpTimeMs));
     }
 
     /**
+     * 获取 salve 集合当中 的最小的提交偏移量
      * Get confirm offset (min slaveAckOffset of all syncStateSet members) for master
      */
     public long getConfirmOffset() {
         if (this.defaultMessageStore.getMessageStoreConfig().getBrokerRole() != BrokerRole.SLAVE) {
+            //如果 只有 一个 异步同步 则 直接获取 Master 的 最偏移量
             if (this.syncStateSet.size() == 1) {
                 return this.defaultMessageStore.getMaxPhyOffset();
             }
             // First time compute confirmOffset.
+            //如果小于 0  第一次 计算提交的偏移量
             if (this.confirmOffset <= 0) {
                 this.confirmOffset = computeConfirmOffset();
             }
@@ -259,6 +299,7 @@ public class AutoSwitchHAService extends DefaultHAService {
     }
 
     public void updateConfirmOffsetWhenSlaveAck(final String slaveAddress) {
+        //如果在同步 集合当中 则 重新 计算 偏移量
         if (this.syncStateSet.contains(slaveAddress)) {
             this.confirmOffset = computeConfirmOffset();
         }
@@ -310,9 +351,14 @@ public class AutoSwitchHAService extends DefaultHAService {
         this.confirmOffset = confirmOffset;
     }
 
+    /**
+     * 计算 确认的偏移量 遍历 连接 集合 从 同步集合 这种获取 最小的确认偏移量
+     * @return
+     */
     private long computeConfirmOffset() {
         final Set<String> currentSyncStateSet = getSyncStateSet();
         long confirmOffset = this.defaultMessageStore.getMaxPhyOffset();
+        //遍历 连接 集合 从 同步集合 这种获取 最小的确认偏移量
         for (HAConnection connection : this.connectionList) {
             final String slaveAddress = ((AutoSwitchHAConnection) connection).getSlaveAddress();
             if (currentSyncStateSet.contains(slaveAddress)) {
@@ -322,6 +368,10 @@ public class AutoSwitchHAService extends DefaultHAService {
         return confirmOffset;
     }
 
+    /**
+     * 设置同步状态集合 计算 确认的偏移量 遍历 连接 集合 从 同步集合 这种获取 最小的确认偏移量
+     * @param syncStateSet
+     */
     public synchronized void setSyncStateSet(final Set<String> syncStateSet) {
         this.syncStateSet.clear();
         this.syncStateSet.addAll(syncStateSet);

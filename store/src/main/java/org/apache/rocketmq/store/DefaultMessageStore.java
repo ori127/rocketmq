@@ -140,6 +140,9 @@ public class DefaultMessageStore implements MessageStore {
      * 状态管理
      */
     private final BrokerStatsManager brokerStatsManager;
+    /**
+     * 消息到达监听
+     */
     private final MessageArrivingListener messageArrivingListener;
     /**
      * broker配置
@@ -167,7 +170,9 @@ public class DefaultMessageStore implements MessageStore {
      * 获取哦消息最大大小
      */
     private final static int MAX_PULL_MSG_SIZE = 128 * 1024 * 1024;
-
+    /**
+     * 存活的副本数量
+     */
     private volatile int aliveReplicasNum = 1;
 
     // Refer the MessageStore of MasterBroker in the same process.
@@ -2369,6 +2374,7 @@ public class DefaultMessageStore implements MessageStore {
         private long lastFlushTimestamp = 0;
 
         private void doFlush(int retryTimes) {
+            //至少刷新多少页数
             int flushConsumeQueueLeastPages = DefaultMessageStore.this.getMessageStoreConfig().getFlushConsumeQueueLeastPages();
 
             if (retryTimes == RETRY_TIMES_OVER) {
@@ -2376,12 +2382,14 @@ public class DefaultMessageStore implements MessageStore {
             }
 
             long logicsMsgTimestamp = 0;
-
+            //刷新消费队列 间隔时间
             int flushConsumeQueueThoroughInterval = DefaultMessageStore.this.getMessageStoreConfig().getFlushConsumeQueueThoroughInterval();
             long currentTimeMillis = System.currentTimeMillis();
+            //当前时间 超过 上次刷新时间 间隔时间 重新记录刷新时间
             if (currentTimeMillis >= (this.lastFlushTimestamp + flushConsumeQueueThoroughInterval)) {
                 this.lastFlushTimestamp = currentTimeMillis;
                 flushConsumeQueueLeastPages = 0;
+                //逻辑消息存储时间戳
                 logicsMsgTimestamp = DefaultMessageStore.this.getStoreCheckpoint().getLogicsMsgTimestamp();
             }
 
