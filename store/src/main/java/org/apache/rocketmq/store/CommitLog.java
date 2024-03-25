@@ -102,7 +102,7 @@ public class CommitLog implements Swappable {
      */
     protected final TopicQueueLock topicQueueLock;
     /**
-     * 完整的存储路径
+     * 磁盘满了的的存储路径
      */
     private volatile Set<String> fullStorePaths = Collections.emptySet();
     /**

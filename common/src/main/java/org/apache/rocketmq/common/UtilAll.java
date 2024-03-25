@@ -111,6 +111,11 @@ public class UtilAll {
         return System.currentTimeMillis() - beginTime;
     }
 
+    /**
+     * 用分号进分割 判断当前时间 HOUR 是否达到
+     * @param when
+     * @return
+     */
     public static boolean isItTimeToDo(final String when) {
         String[] whiles = when.split(";");
         if (whiles.length > 0) {
@@ -243,14 +248,18 @@ public class UtilAll {
                 STORE_LOG.error("Error when measuring disk space usage, file doesn't exist on this path: {}", path);
                 return -1;
             }
-
+            //总空间
             long totalSpace = file.getTotalSpace();
 
             if (totalSpace > 0) {
+                //总空间 - 剩余的空间 为已经使用的空间
                 long usedSpace = totalSpace - file.getFreeSpace();
+                //用户可使用的空间大小
                 long usableSpace = file.getUsableSpace();
+                //整个空间大小 用户可以 使用的空间 + 已经使用的空间
                 long entireSpace = usedSpace + usableSpace;
                 long roundNum = 0;
+                //FIXME:: 计算磁盘百分比 看不懂这个计算公式
                 if (usedSpace * 100 % entireSpace != 0) {
                     roundNum = 1;
                 }
@@ -277,7 +286,7 @@ public class UtilAll {
             if (!file.exists()) {
                 return -1;
             }
-
+            //FIXME:: TotalSpace - FreeSpace 已经使用的空间 +  UsableSpace 这里面不是有一部分重复了么?
             return file.getTotalSpace() -  file.getFreeSpace() + file.getUsableSpace();
         } catch (Exception e) {
             return -1;

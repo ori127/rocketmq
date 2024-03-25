@@ -484,6 +484,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
         if (flushLeastPages > 0) {
             return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= flushLeastPages;
         }
+        //如果 flushLeastPages 为 0 则根据  写位置  是否 大于 刷新位置 判断
         //否则判断 写位置  是否 大于 刷新位置
         return write > flush;
     }

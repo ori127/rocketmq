@@ -59,7 +59,7 @@ public class ConsumeQueueStore {
      */
     protected final QueueOffsetAssigner queueOffsetAssigner = new QueueOffsetAssigner();
     /**
-     * key 为 topic , value.key 为消息 队列的 id , value 为 ConsumeQueueInterface
+     * key 为 topic , value.key 为消息 队列的 id , value.value 为 ConsumeQueueInterface
      */
     protected final ConcurrentMap<String/* topic */, ConcurrentMap<Integer/* queueId */, ConsumeQueueInterface>> consumeQueueTable;
 

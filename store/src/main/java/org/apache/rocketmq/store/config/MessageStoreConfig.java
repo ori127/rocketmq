@@ -124,9 +124,13 @@ public class MessageStoreConfig {
     private int commitIntervalCommitLog = 200;
 
     private int maxRecoveryCommitlogFiles = 30;
-
+    /**
+     * 磁盘空间告警比率
+     */
     private int diskSpaceWarningLevelRatio = 90;
-
+    /**
+     * 磁盘空间强制清理空间比率
+     */
     private int diskSpaceCleanForciblyRatio = 85;
 
     /**
@@ -153,6 +157,9 @@ public class MessageStoreConfig {
      */
     @ImportantField
     private String deleteWhen = "04";
+    /**
+     * 磁盘最大的使用比率
+     */
     private int diskMaxUsedSpaceRatio = 75;
     // The number of hours to keep a log file before deleting it (in hours)
     /**
@@ -242,6 +249,9 @@ public class MessageStoreConfig {
      */
     private String messageDelayLevel = "1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h";
     private long flushDelayOffsetInterval = 1000 * 10;
+    /**
+     *
+     */
     @ImportantField
     private boolean cleanFileForciblyEnable = true;
     /**
@@ -391,7 +401,9 @@ public class MessageStoreConfig {
     private long maxChecksumRange = 1024 * 1024 * 1024;
 
     private int replicasPerDiskPartition = 1;
-
+    /**
+     * 逻辑强制清理磁盘的阈值
+     */
     private double logicalDiskSpaceCleanForciblyThreshold = 0.8;
 
     private long maxSlaveResendLength = 256 * 1024 * 1024;
