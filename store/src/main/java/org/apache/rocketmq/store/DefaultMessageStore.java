@@ -112,9 +112,13 @@ public class DefaultMessageStore implements MessageStore {
      * 刷新队列的服务
      */
     private final FlushConsumeQueueService flushConsumeQueueService;
-
+    /**
+     * 定期和根据磁盘占比删除 CommitLog
+     */
     private final CleanCommitLogService cleanCommitLogService;
-
+    /**
+     * 定期和根据磁盘占比删除 ConsumeQueue
+     */
     private final CleanConsumeQueueService cleanConsumeQueueService;
 
     private final CorrectLogicOffsetService correctLogicOffsetService;
@@ -1653,6 +1657,8 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private void cleanFilesPeriodically() {
+        // 定点进行删除 和 根据磁盘占用比例 删除 CommitLog
+        // 根据 CommitLog 的最小 偏移量 删除 ConsumeQueue
         this.cleanCommitLogService.run();
         this.cleanConsumeQueueService.run();
         this.correctLogicOffsetService.run();
@@ -2236,6 +2242,9 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     class CleanConsumeQueueService {
+        /**
+         * 最近删除的最小偏移量
+         */
         private long lastPhysicalMinOffset = 0;
 
         public void run() {
@@ -2247,17 +2256,20 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         private void deleteExpiredFiles() {
+            //删除消费队列文件的时间间隔
             int deleteLogicsFilesInterval = DefaultMessageStore.this.getMessageStoreConfig().getDeleteConsumeQueueFilesInterval();
-
+            //获取 commitLog 最小偏移量
             long minOffset = DefaultMessageStore.this.commitLog.getMinOffset();
+            //  commitLog 最小偏移量 大于上次最小偏移量
             if (minOffset > this.lastPhysicalMinOffset) {
                 this.lastPhysicalMinOffset = minOffset;
-
+                //key 为 topic , value.key 为消息 队列的 id , value.value 为 ConsumeQueueInterface
                 ConcurrentMap<String, ConcurrentMap<Integer, ConsumeQueueInterface>> tables = DefaultMessageStore.this.getConsumeQueueTable();
-
+                //根据 commitLog 最小偏移量 进行删除
                 for (ConcurrentMap<Integer, ConsumeQueueInterface> maps : tables.values()) {
                     for (ConsumeQueueInterface logic : maps.values()) {
                         int deleteCount = DefaultMessageStore.this.consumeQueueStore.deleteExpiredFile(logic, minOffset);
+                        //消费队列 间隔进行删除
                         if (deleteCount > 0 && deleteLogicsFilesInterval > 0) {
                             try {
                                 Thread.sleep(deleteLogicsFilesInterval);
@@ -2266,7 +2278,7 @@ public class DefaultMessageStore implements MessageStore {
                         }
                     }
                 }
-
+                // index删除偏移量
                 DefaultMessageStore.this.indexService.deleteExpiredFile(minOffset);
             }
         }

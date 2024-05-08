@@ -148,6 +148,9 @@ public class MessageStoreConfig {
     // CommitLog removal interval
     private int deleteCommitLogFilesInterval = 100;
     // ConsumeQueue removal interval
+    /**
+     * 删除消费队列的文件间隔
+     */
     private int deleteConsumeQueueFilesInterval = 100;
     private int destroyMapedFileIntervalForcibly = 1000 * 120;
     private int redeleteHangedFileInterval = 1000 * 120;
