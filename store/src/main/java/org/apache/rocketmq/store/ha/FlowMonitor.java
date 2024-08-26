@@ -76,6 +76,9 @@ public class FlowMonitor extends ServiceThread {
         return this.transferredByteInSecond;
     }
 
+    /**
+     * 获取服务名称
+     */
     @Override
     public String getServiceName() {
         return FlowMonitor.class.getSimpleName();
