@@ -36,9 +36,14 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 
 public class StoreStatsService extends ServiceThread {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
-
+    /**
+     * 采样的评率
+     */
     private static final int FREQUENCY_OF_SAMPLING = 1000;
 
+    /**
+     * 采样最大的记录数
+     */
     private static final int MAX_RECORDS_OF_SAMPLING = 60 * 10;
     /**
      * 投递消息的降级时间
@@ -132,6 +137,7 @@ public class StoreStatsService extends ServiceThread {
 
     public double findPutMessageEntireTimePX(double px) {
         Map<Long, LongAdder> lastBuckets = this.lastBuckets;
+        //当前时间戳
         long start = System.currentTimeMillis();
         double result = 0.0;
         long totalRequest = lastBuckets.values().stream().mapToLong(LongAdder::longValue).sum();
